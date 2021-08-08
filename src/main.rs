@@ -1,29 +1,48 @@
-use nalgebra::{Matrix2, SMatrix, Vector2};
+use nalgebra::{SMatrix, SVector};
 use rand::Rng;
 use std::f32::consts::E;
 use std::ops::Range;
 
-fn sigmoid(n: f32) -> f32 {
+type FLOAT = f32;
+type Vector<const SIZE: usize> = SVector<FLOAT, SIZE>;
+type Matrix<const ROWS: usize, const COLS: usize> = SMatrix<FLOAT, ROWS, COLS>;
+
+fn sigmoid(n: FLOAT) -> FLOAT {
     1.0 / (1.0 + E.powf(n))
 }
 
-fn generate_number(range: Range<f32>) -> f32 {
+fn generate_number(range: Range<FLOAT>) -> FLOAT {
     rand::thread_rng().gen_range(range)
 }
 
+fn generate_matrix<const ROWS: usize, const COLS: usize>() -> Matrix<ROWS, COLS> {
+    Matrix::from_fn(|_i, _j| generate_number(0.0..1.0))
+}
+
+fn generate_vector<const SIZE: usize>() -> Vector<SIZE> {
+    Vector::from_fn(|_i, _j| generate_number(0.0..1.0))
+}
+
+fn activate_layer<const INPUT_SIZE: usize, const OUTPUT_SIZE: usize>(
+    inputs: Vector<INPUT_SIZE>,
+    weights: Matrix<OUTPUT_SIZE, INPUT_SIZE>,
+    biases: Vector<OUTPUT_SIZE>,
+) -> Vector<OUTPUT_SIZE> {
+    (weights * inputs + biases).map(sigmoid)
+}
+
 fn main() {
-    let big_matrix = SMatrix::<f32, 4, 4>::from_fn(|_i, _j| generate_number(0.0..1.0));
-    println!("{}", big_matrix);
-    let sigmoid_matrix = big_matrix.map(sigmoid);
-    println!("{}", sigmoid_matrix);
+    const INPUT_SIZE: usize = 2;
+    const HIDDEN_SIZE: usize = 3;
+    const OUTPUT_SIZE: usize = 5;
+    let input_to_hidden_weights = generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>();
+    let hidden_to_output_weights = generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>();
+    let hidden_biases = generate_vector::<HIDDEN_SIZE>();
+    let output_biases = generate_vector::<OUTPUT_SIZE>();
 
-    let linear_transformation_matrix = Matrix2::new(1, 3, 2, 1);
-    let original_vector = Vector2::new(4, 2);
-    let transformed_vector = linear_transformation_matrix * original_vector;
-    println!("{}", transformed_vector);
+    let inputs = generate_vector::<INPUT_SIZE>();
 
-    let ninety_degree_spin = Matrix2::new(0, -1, 1, 0);
-    let shear = Matrix2::new(1, 2, 0, 1);
-    let combined_matrix = ninety_degree_spin * shear;
-    println!("{}", combined_matrix);
+    let biases = activate_layer(inputs, input_to_hidden_weights, hidden_biases);
+    let outputs = activate_layer(biases, hidden_to_output_weights, output_biases);
+    println!("{}", outputs);
 }
