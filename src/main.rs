@@ -161,22 +161,29 @@ fn get_gradients(
 
 fn main() {
     const INPUT_SIZE: usize = 2;
-    const HIDDEN_SIZE: usize = 100;
+    const HIDDEN_SIZE: usize = 256;
     const OUTPUT_SIZE: usize = 5;
     const HIDDEN_LAYER_COUNT: usize = 1;
     const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
     const LEARNING_RATE: FLOAT = 0.001;
-    let input_to_hidden_weights = generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>();
-    let hidden_to_output_weights = generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>();
-    let hidden_biases = generate_vector::<HIDDEN_SIZE>();
-    let output_biases = generate_vector::<OUTPUT_SIZE>();
 
+    let input_to_hidden_weights = to_dynamic(generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>());
+    let hidden_to_output_weights = to_dynamic(generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>());
+
+    let mut weights =
+        (0..HIDDEN_LAYER_COUNT - 1).fold(vec![input_to_hidden_weights], |mut acc, _layer| {
+            acc.push(to_dynamic(generate_matrix::<HIDDEN_SIZE, HIDDEN_SIZE>()));
+            acc
+        });
+    weights.push(hidden_to_output_weights);
+
+    let mut biases = (0..HIDDEN_LAYER_COUNT).fold(Vec::new(), |mut acc, _layer| {
+        acc.push(to_dynamic(generate_vector::<HIDDEN_SIZE>()));
+        acc
+    });
+    biases.push(to_dynamic(generate_vector::<OUTPUT_SIZE>()));
     let inputs = to_dynamic(generate_vector::<INPUT_SIZE>());
-    let mut weights = vec![
-        to_dynamic(input_to_hidden_weights),
-        to_dynamic(hidden_to_output_weights),
-    ];
-    let mut biases = vec![to_dynamic(hidden_biases), to_dynamic(output_biases)];
+
     let mut outputs = Vec::new();
     for _epoch in 0..100000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
