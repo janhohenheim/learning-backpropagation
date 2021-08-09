@@ -46,10 +46,7 @@ fn run_activation_function<const SIZE: usize>(neuron_values: Vector<SIZE>) -> Ve
 }
 
 /// Cost function is (expected - actual)^2
-fn del_cost_wrt_layer_activation_for_last_layer<const SIZE: usize>(
-    actual: &Vector<SIZE>,
-    expected: &Vector<SIZE>,
-) -> Vector<SIZE> {
+fn del_cost_wrt_layer_activation_for_last_layer(actual: &DMatrix, expected: &DMatrix) -> DMatrix {
     (expected - actual).abs() * 2.0
 }
 
@@ -61,6 +58,30 @@ fn del_activation_wrt_neuron_values<const SIZE: usize>(
 
 fn to_dynamic<const ROWS: usize, const COLS: usize>(matrix: Matrix<ROWS, COLS>) -> DMatrix {
     matrix.resize(ROWS, COLS, 0.0)
+}
+
+fn del_cost_wrt_neuron_activation(
+    layer_count: usize,
+    weights: &Vec<DMatrix>,
+    activations: &Vec<DMatrix>,
+) -> Vec<DMatrix> {
+    let outputs = activations.last().unwrap();
+    let expected = DMatrix::zeros(outputs.len(), 1);
+    let del_cost_wrt_layer_activation_for_last_layer =
+        del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
+    (0..(layer_count - 1)).rev().fold(
+        vec![del_cost_wrt_layer_activation_for_last_layer],
+        |mut acc, layer| {
+            let outgoing_weights = weights[layer].transpose();
+            let next_activations = &activations[layer + 1];
+            let last_layer_del_cost_wrt_neuron_activation = acc.first().unwrap().sum();
+            acc.insert(
+                0,
+                outgoing_weights * next_activations * last_layer_del_cost_wrt_neuron_activation,
+            );
+            acc
+        },
+    )
 }
 
 fn main() {
@@ -92,26 +113,11 @@ fn main() {
         to_dynamic(input_to_hidden_weights),
         to_dynamic(hidden_to_output_weights),
     ];
-    let expected = Vector::<OUTPUT_SIZE>::zeros();
-    let del_cost_wrt_layer_activation_for_last_layer = to_dynamic(
-        del_cost_wrt_layer_activation_for_last_layer(&outputs, &expected),
-    );
     const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
-    let del_cost_wrt_neuron_activation = (0..(LAYER_COUNT - 1)).rev().fold(
-        vec![del_cost_wrt_layer_activation_for_last_layer],
-        |mut acc, layer| {
-            let outgoing_weights = &weights[layer].transpose();
-            let next_activations = &activations[layer + 1];
-            let last_layer_del_cost_wrt_neuron_activation = acc.first().unwrap().sum();
-            acc.insert(
-                0,
-                outgoing_weights * next_activations * last_layer_del_cost_wrt_neuron_activation,
-            );
-            acc
-        },
-    );
 
-    let gradient = (1..LAYER_COUNT)
+    let del_cost_wrt_neuron_activation =
+        del_cost_wrt_neuron_activation(LAYER_COUNT, &weights, &activations);
+    let weight_gradient = (1..LAYER_COUNT)
         .rev()
         .fold(Vec::new(), |mut acc, layer| {
             let current_activations = &activations[layer];
