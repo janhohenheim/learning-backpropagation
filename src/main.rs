@@ -57,9 +57,9 @@ fn del_cost_wrt_neuron_activation(
     layer_count: usize,
     weights: &Vec<DMatrix>,
     activations: &Vec<DMatrix>,
+    expected: &DMatrix,
 ) -> Vec<DMatrix> {
     let outputs = activations.last().unwrap();
-    let expected = DMatrix::from_fn(outputs.len(), 1, |i, _j| i as FLOAT);
     let del_cost_wrt_layer_activation_for_last_layer =
         del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
     (0..(layer_count - 1)).rev().fold(
@@ -139,9 +139,10 @@ fn get_gradients(
     layer_count: usize,
     weights: &Vec<DMatrix>,
     activations: &Vec<DMatrix>,
+    expected: &DMatrix,
 ) -> (Vec<DMatrix>, Vec<DMatrix>) {
     let del_cost_wrt_neuron_activation =
-        del_cost_wrt_neuron_activation(layer_count, &weights, &activations);
+        del_cost_wrt_neuron_activation(layer_count, &weights, &activations, expected);
     let weight_gradient = get_gradient(
         layer_count,
         &weights,
@@ -183,12 +184,13 @@ fn main() {
     });
     biases.push(to_dynamic(generate_vector::<OUTPUT_SIZE>()));
     let inputs = to_dynamic(generate_vector::<INPUT_SIZE>());
-
+    let expected = DMatrix::from_fn(OUTPUT_SIZE, 1, |i, _j| i as FLOAT);
     let mut outputs = Vec::new();
     for _epoch in 0..100000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
         outputs.push(activations.last().unwrap().clone());
-        let (weight_gradient, bias_gradient) = get_gradients(LAYER_COUNT, &weights, &activations);
+        let (weight_gradient, bias_gradient) =
+            get_gradients(LAYER_COUNT, &weights, &activations, &expected);
         for (weight, gradient) in weights.iter_mut().zip(weight_gradient) {
             *weight += &gradient * LEARNING_RATE;
         }
