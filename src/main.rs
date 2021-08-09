@@ -5,6 +5,8 @@ use std::ops::Range;
 
 type FLOAT = f32;
 type Vector<const SIZE: usize> = SVector<FLOAT, SIZE>;
+type DVector = nalgebra::DVector<FLOAT>;
+type DMatrix = nalgebra::DMatrix<FLOAT>;
 type Matrix<const ROWS: usize, const COLS: usize> = SMatrix<FLOAT, ROWS, COLS>;
 
 const INITIAL_VALUE_OFFSET: FLOAT = 1.0;
@@ -51,37 +53,21 @@ fn del_cost_wrt_layer_activation_for_last_layer<const SIZE: usize>(
     (expected - actual).abs() * 2.0
 }
 
-/// Cost function is (expected - actual)^2
-fn del_cost_wrt_layer_activation_for_not_last_layer<
-    const INPUT_SIZE: usize,
-    const OUTPUT_SIZE: usize,
->(
-    next_weights: &Matrix<OUTPUT_SIZE, INPUT_SIZE>,
-    next_neuron_values: &Vector<OUTPUT_SIZE>,
-    next_del_cost_wrt_layer_activation: &Vector<OUTPUT_SIZE>,
-) -> Vector<INPUT_SIZE> {
-    (expected - actual).abs() * 2.0
-}
-
 fn del_activation_wrt_neuron_values<const SIZE: usize>(
     neuron_values: &Vector<SIZE>,
 ) -> Vector<SIZE> {
     neuron_values.map(d_sigmoid)
 }
 
-fn del_cost_wrt_neuron_values<const INPUT_SIZE: usize, const OUTPUT_SIZE: usize>(
-    actual: &Vector<OUTPUT_SIZE>,
-    expected: &Vector<OUTPUT_SIZE>,
-) -> Vector<OUTPUT_SIZE> {
-    // Hadamard product
-    del_cost_wrt_layer_activation(actual, expected)
-        .component_mul(&del_activation_wrt_neuron_values(actual))
+fn to_dynamic<const ROWS: usize, const COLS: usize>(matrix: Matrix<ROWS, COLS>) -> DMatrix {
+    matrix.resize(ROWS, COLS, 0.0)
 }
 
 fn main() {
     const INPUT_SIZE: usize = 2;
     const HIDDEN_SIZE: usize = 3;
     const OUTPUT_SIZE: usize = 5;
+    const HIDDEN_LAYER_COUNT: usize = 1;
     let input_to_hidden_weights = generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>();
     let hidden_to_output_weights = generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>();
     let hidden_biases = generate_vector::<HIDDEN_SIZE>();
@@ -100,19 +86,54 @@ fn main() {
         &output_biases,
     ));
 
+    let activations = vec![to_dynamic(inputs), to_dynamic(hidden), to_dynamic(outputs)];
+    let biases = vec![to_dynamic(hidden_biases), to_dynamic(output_biases)];
+    let weights = vec![
+        to_dynamic(input_to_hidden_weights),
+        to_dynamic(hidden_to_output_weights),
+    ];
     let expected = Vector::<OUTPUT_SIZE>::zeros();
-    let del_cost_wrt_neuron_values = del_cost_wrt_neuron_values(&outputs, &expected);
-    let hidden_to_output_gradients =
-        Matrix::from_fn(|i, j| del_cost_wrt_neuron_values[i] * hidden[j]);
-    let input_to_hidden_gradients = Matrix::from_fn(|i, j| {
-        hidden_to_output_gradients[(i, j)]
-            * hidden_to_output_weights[(i, j)]
-            * del_sigmoid(inputs[j])
-    });
+    let del_cost_wrt_layer_activation_for_last_layer = to_dynamic(
+        del_cost_wrt_layer_activation_for_last_layer(&outputs, &expected),
+    );
+    const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
+    let del_cost_wrt_neuron_activation = (0..(LAYER_COUNT - 1)).rev().fold(
+        vec![del_cost_wrt_layer_activation_for_last_layer],
+        |mut acc, layer| {
+            let outgoing_weights = &weights[layer].transpose();
+            let next_activations = &activations[layer + 1];
+            let last_layer_del_cost_wrt_neuron_activation = acc.first().unwrap().sum();
+            acc.insert(
+                0,
+                outgoing_weights * next_activations * last_layer_del_cost_wrt_neuron_activation,
+            );
+            acc
+        },
+    );
 
-    const LEARNING_RATE: FLOAT = 0.05;
-    let new_hidden_to_output_weights =
-        hidden_to_output_weights - hidden_to_output_gradients * LEARNING_RATE;
-    let new_input_to_hidden_weights =
-        input_to_hidden_weights - input_to_hidden_gradients * LEARNING_RATE;
+    let gradient = (1..LAYER_COUNT)
+        .rev()
+        .fold(Vec::new(), |mut acc, layer| {
+            let current_activations = &activations[layer];
+            let last_activations = &activations[layer - 1];
+            let layer_gradient = DMatrix::from_fn(
+                weights[layer - 1].nrows(),
+                weights[layer - 1].ncols(),
+                |j, k| {
+                    let del_cost_wrt_neuron_activation_for_current_layer =
+                        if layer == LAYER_COUNT - 1 {
+                            &del_cost_wrt_neuron_activation[layer][j]
+                        } else {
+                            &del_cost_wrt_neuron_activation[layer + 1][k]
+                        };
+                    &last_activations[k]
+                        * d_sigmoid(current_activations[j])
+                        * del_cost_wrt_neuron_activation_for_current_layer
+                },
+            );
+            acc.push(layer_gradient);
+            acc
+        })
+        .iter()
+        .rev();
 }
