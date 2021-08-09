@@ -5,7 +5,6 @@ use std::ops::Range;
 
 type FLOAT = f32;
 type Vector<const SIZE: usize> = SVector<FLOAT, SIZE>;
-type DVector = nalgebra::DVector<FLOAT>;
 type DMatrix = nalgebra::DMatrix<FLOAT>;
 type Matrix<const ROWS: usize, const COLS: usize> = SMatrix<FLOAT, ROWS, COLS>;
 
@@ -94,22 +93,23 @@ fn get_gradient(
         .fold(Vec::new(), |mut acc, layer| {
             let current_activations = &activations[layer];
             let last_activations = &activations[layer - 1];
-            let layer_gradient = DMatrix::from_fn(
-                weights[layer - 1].nrows(),
-                weights[layer - 1].ncols(),
-                |j, k| {
-                    let del_cost_wrt_neuron_activation_for_current_layer =
-                        if layer == layer_count - 1 {
-                            &del_cost_wrt_neuron_activation[layer][j]
-                        } else {
-                            &del_cost_wrt_neuron_activation[layer + 1][k]
-                        };
-                    let last_activation = if is_bias { last_activations[k] } else { 1.0 };
-                    last_activation
-                        * d_sigmoid(current_activations[j])
-                        * del_cost_wrt_neuron_activation_for_current_layer
-                },
-            );
+            let rows = weights[layer - 1].nrows();
+            let columns = if is_bias {
+                1
+            } else {
+                weights[layer - 1].ncols()
+            };
+            let layer_gradient = DMatrix::from_fn(rows, columns, |j, k| {
+                let del_cost_wrt_neuron_activation_for_current_layer = if layer == layer_count - 1 {
+                    &del_cost_wrt_neuron_activation[layer][j]
+                } else {
+                    &del_cost_wrt_neuron_activation[layer + 1][k]
+                };
+                let last_activation = if is_bias { 1.0 } else { last_activations[k] };
+                last_activation
+                    * d_sigmoid(current_activations[j])
+                    * del_cost_wrt_neuron_activation_for_current_layer
+            });
             acc.push(layer_gradient);
             acc
         })
@@ -118,24 +118,13 @@ fn get_gradient(
         .collect()
 }
 
-fn main() {
-    const INPUT_SIZE: usize = 2;
-    const HIDDEN_SIZE: usize = 3;
-    const OUTPUT_SIZE: usize = 5;
-    const HIDDEN_LAYER_COUNT: usize = 1;
-    const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
-    let input_to_hidden_weights = generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>();
-    let hidden_to_output_weights = generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>();
-    let hidden_biases = generate_vector::<HIDDEN_SIZE>();
-    let output_biases = generate_vector::<OUTPUT_SIZE>();
-
-    let inputs = to_dynamic(generate_vector::<INPUT_SIZE>());
-    let weights = vec![
-        to_dynamic(input_to_hidden_weights),
-        to_dynamic(hidden_to_output_weights),
-    ];
-    let biases = vec![to_dynamic(hidden_biases), to_dynamic(output_biases)];
-    let activations = (0..LAYER_COUNT - 1).fold(vec![inputs], |mut acc, layer| {
+fn get_activations(
+    layer_count: usize,
+    inputs: &DMatrix,
+    weights: &Vec<DMatrix>,
+    biases: &Vec<DMatrix>,
+) -> Vec<DMatrix> {
+    (0..layer_count - 1).fold(vec![inputs.clone()], |mut acc, layer| {
         let activation = run_activation_function(get_neuron_values(
             &acc[layer],
             &weights[layer],
@@ -143,22 +132,63 @@ fn main() {
         ));
         acc.push(activation);
         acc
-    });
+    })
+}
 
+fn get_gradients(
+    layer_count: usize,
+    weights: &Vec<DMatrix>,
+    activations: &Vec<DMatrix>,
+) -> (Vec<DMatrix>, Vec<DMatrix>) {
     let del_cost_wrt_neuron_activation =
-        del_cost_wrt_neuron_activation(LAYER_COUNT, &weights, &activations);
+        del_cost_wrt_neuron_activation(layer_count, &weights, &activations);
     let weight_gradient = get_gradient(
-        LAYER_COUNT,
+        layer_count,
         &weights,
         &activations,
         &del_cost_wrt_neuron_activation,
         false,
     );
     let bias_gradient = get_gradient(
-        LAYER_COUNT,
+        layer_count,
         &weights,
         &activations,
         &del_cost_wrt_neuron_activation,
         true,
     );
+    (weight_gradient, bias_gradient)
+}
+
+fn main() {
+    const INPUT_SIZE: usize = 2;
+    const HIDDEN_SIZE: usize = 3;
+    const OUTPUT_SIZE: usize = 5;
+    const HIDDEN_LAYER_COUNT: usize = 1;
+    const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
+    const LEARNING_RATE: FLOAT = 0.01;
+    let input_to_hidden_weights = generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>();
+    let hidden_to_output_weights = generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>();
+    let hidden_biases = generate_vector::<HIDDEN_SIZE>();
+    let output_biases = generate_vector::<OUTPUT_SIZE>();
+
+    let inputs = to_dynamic(generate_vector::<INPUT_SIZE>());
+    let mut weights = vec![
+        to_dynamic(input_to_hidden_weights),
+        to_dynamic(hidden_to_output_weights),
+    ];
+    let mut biases = vec![to_dynamic(hidden_biases), to_dynamic(output_biases)];
+    let mut outputs = Vec::new();
+    for _epoch in 0..10000 {
+        let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
+        outputs.push(activations.last().unwrap().clone());
+        let (weight_gradient, bias_gradient) = get_gradients(LAYER_COUNT, &weights, &activations);
+        for (weight, gradient) in weights.iter_mut().zip(weight_gradient) {
+            *weight -= &gradient * LEARNING_RATE;
+        }
+        for (bias, gradient) in biases.iter_mut().zip(bias_gradient) {
+            *bias -= &gradient * LEARNING_RATE;
+        }
+    }
+    println!("First output: {}", outputs.first().unwrap());
+    println!("Last output: {}", outputs.last().unwrap());
 }
