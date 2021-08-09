@@ -59,7 +59,7 @@ fn del_cost_wrt_neuron_activation(
     activations: &Vec<DMatrix>,
 ) -> Vec<DMatrix> {
     let outputs = activations.last().unwrap();
-    let expected = DMatrix::zeros(outputs.len(), 1);
+    let expected = DMatrix::from_fn(outputs.len(), 1, |i, _j| i as FLOAT);
     let del_cost_wrt_layer_activation_for_last_layer =
         del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
     (0..(layer_count - 1)).rev().fold(
