@@ -106,7 +106,7 @@ fn get_gradients(
     weights: &[DMatrix],
 ) -> Vec<(DMatrix, DMatrix)> {
     let last_activations = activations.iter().rev().skip(1);
-    dc_dzs.iter().zip(last_activations).zip(weights).fold(
+    dc_dzs.iter().zip(last_activations).zip(weights.iter().rev()).fold(
         Vec::new(),
         |mut gradients, ((dc_dz, last_activation), weights)| {
             let weight_gradient = weights.map_with_location(|row, col, _| {
@@ -152,7 +152,8 @@ fn main() {
         for ((layer_weights, layer_biases), (gradient_weight, gradient_bias)) in weights
             .iter_mut()
             .zip(biases.iter_mut())
-            .zip(gradients.iter())
+            .zip(gradients.iter()
+            .rev())
         {
             *layer_weights += gradient_weight * LEARNING_RATE;
             *layer_biases += gradient_bias * LEARNING_RATE;
