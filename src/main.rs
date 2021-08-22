@@ -63,7 +63,7 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> V
                     .map(|weights| weights.dot(&next_dc_dz))
                     .collect::<Vec<FLOAT>>(),
             );
-            let da_dz = da_dz(neuron_activations);
+            let da_dz = crate::da_dz(neuron_activations);
             let dc_dz = dc_da.component_mul(&da_dz);
             dc_dzs.push(dc_dz);
             dc_dzs
