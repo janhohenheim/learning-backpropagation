@@ -53,37 +53,34 @@ fn to_dynamic<const ROWS: usize, const COLS: usize>(matrix: Matrix<ROWS, COLS>) 
     matrix.resize(ROWS, COLS, 0.0)
 }
 
-fn get_gradients(
+fn get_dc_dz(
     weights: &Vec<DMatrix>,
     activations: &Vec<DMatrix>,
     expected: &DMatrix,
-) -> Vec<(DMatrix, DMatrix)> {
+) -> Vec<DMatrix> {
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
     let dc_da = del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
     let dc_dz = dc_da.component_mul(&del_activation_wrt_neuron_values(outputs));
-    let (_, gradients) =
         (1..layer_count - 1)
             .rev()
-            .fold((dc_dz, Vec::new()), |(dc_dz, mut gradients), layer| {
+            .fold(vec![dc_dz], |mut dc_dzs, layer| {
                 let outgoing_weights = &weights[layer];
                 let neuron_activations = &activations[layer];
+                let next_dc_dz = dc_dzs.last().unwrap();
                 let dc_da = DMatrix::from_column_slice(
                     outgoing_weights.ncols(),
                     1,
                     &outgoing_weights
                         .column_iter()
-                        .map(|weights| weights.dot(&dc_dz))
+                        .map(|weights| weights.dot(&next_dc_dz))
                         .collect::<Vec<FLOAT>>(),
                 );
                 let da_dz = del_activation_wrt_neuron_values(neuron_activations);
                 let dc_dz = dc_da.component_mul(&da_dz);
-                let dc_dw = dc_dz.component_mul(&neuron_activations);
-                let dc_db = dc_dz.clone();
-                gradients.push((dc_dw, dc_db));
-                (dc_dz, gradients)
-            });
-    gradients.into_iter().rev().collect()
+                dc_dzs.push(dc_dz);
+                dc_dzs
+            })
 }
 
 fn get_activations(
@@ -101,6 +98,24 @@ fn get_activations(
         acc.push(activation);
         acc
     })
+}
+
+fn get_gradients(
+    dc_dzs: &Vec<DMatrix>,
+    activations: &Vec<DMatrix>,
+    weights: &Vec<DMatrix>,
+) -> Vec<(DMatrix, DMatrix)> {
+    let last_activations = activations.iter().rev().skip(1);
+    dc_dzs.iter().zip(last_activations).zip(weights).fold(
+        Vec::new(),
+        |mut gradients, ((dc_dz, last_activation), weights)| {
+            let weight_gradient = weights.map_with_location(|row, col, _| {
+                dc_dz[row] * last_activation[col]
+            });
+            let bias_gradient = dc_dz.clone();
+            gradients.push((weight_gradient, bias_gradient));
+            gradients
+        })
 }
 
 fn main() {
@@ -132,7 +147,8 @@ fn main() {
     for _epoch in 0..100000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
         outputs.push(activations.last().unwrap().clone());
-        let gradients = get_gradients(&weights, &activations, &expected);
+        let dc_dz = get_dc_dz(&weights, &activations, &expected);
+        let gradients = get_gradients(&dc_dz,&activations, &weights);
         for ((layer_weights, layer_biases), (gradient_weight, gradient_bias)) in weights
             .iter_mut()
             .zip(biases.iter_mut())
