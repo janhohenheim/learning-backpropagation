@@ -65,10 +65,9 @@ fn get_gradients(
     let (_, gradients) =
         (1..layer_count - 1)
             .rev()
-            .fold((dc_dz, vec![]), |(dc_dz, mut gradients), layer| {
-                let outgoing_weights = weights[layer].transpose();
+            .fold((dc_dz, Vec::new()), |(dc_dz, mut gradients), layer| {
+                let outgoing_weights = &weights[layer];
                 let neuron_activations = &activations[layer];
-                let last_activations = &activations[layer];
                 let dc_da = DMatrix::from_column_slice(
                     outgoing_weights.ncols(),
                     1,
@@ -79,7 +78,7 @@ fn get_gradients(
                 );
                 let da_dz = del_activation_wrt_neuron_values(neuron_activations);
                 let dc_dz = dc_da.component_mul(&da_dz);
-                let dc_dw = dc_dz.component_mul(&last_activations.transpose());
+                let dc_dw = dc_dz.component_mul(&neuron_activations);
                 let dc_db = dc_dz.clone();
                 gradients.push((dc_dw, dc_db));
                 (dc_dz, gradients)
