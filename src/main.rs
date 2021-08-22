@@ -63,8 +63,10 @@ fn get_gradients(
     let del_cost_wrt_layer_activation_for_last_layer =
         del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
     let del_cost_wrt_neuron_values_for_last_layer =
-        del_cost_wrt_layer_activation_for_last_layer * del_activation_wrt_neuron_values(outputs);
+        del_cost_wrt_layer_activation_for_last_layer.component_mul(&del_activation_wrt_neuron_values(outputs));
     let penultimate_layer_activations = &activations[layer_count - 2];
+    println!("{}", penultimate_layer_activations);
+    println!("{}", del_cost_wrt_neuron_values_for_last_layer);
     let del_cost_wrt_weight_for_last_layer =
         del_cost_wrt_neuron_values_for_last_layer.dot(&penultimate_layer_activations);
     let del_cost_wrt_bias_for_last_layer = del_cost_wrt_neuron_values_for_last_layer.sum();
@@ -110,7 +112,7 @@ fn get_activations(
 
 fn main() {
     const INPUT_SIZE: usize = 2;
-    const HIDDEN_SIZE: usize = 256;
+    const HIDDEN_SIZE: usize = 3;
     const OUTPUT_SIZE: usize = 5;
     const HIDDEN_LAYER_COUNT: usize = 1;
     const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
