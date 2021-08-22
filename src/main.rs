@@ -124,7 +124,7 @@ fn main() {
     const OUTPUT_SIZE: usize = 5;
     const HIDDEN_LAYER_COUNT: usize = 1;
     const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
-    const LEARNING_RATE: FLOAT = 0.001;
+    const LEARNING_RATE: FLOAT = 0.3;
 
     let input_to_hidden_weights = to_dynamic(generate_matrix::<HIDDEN_SIZE, INPUT_SIZE>());
     let hidden_to_output_weights = to_dynamic(generate_matrix::<OUTPUT_SIZE, HIDDEN_SIZE>());
