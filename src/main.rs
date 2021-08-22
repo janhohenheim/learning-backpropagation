@@ -100,6 +100,7 @@ fn get_gradients_from_dc_dz(
         .fold(
             Vec::new(),
             |mut gradients, ((dc_dz, last_activation), weights)| {
+                // rows are *to* layer, colums are *from* layer
                 let weight_gradient =
                     weights.map_with_location(|row, col, _| dc_dz[row] * last_activation[col]);
                 let bias_gradient = dc_dz.clone();
