@@ -3,22 +3,22 @@ use rand::Rng;
 use std::f32::consts::E;
 use std::ops::Range;
 
-type FLOAT = f32;
-type Matrix = DMatrix<FLOAT>;
+type Float = f32;
+type Matrix = DMatrix<Float>;
 
-const INITIAL_VALUE_OFFSET: FLOAT = 1.0;
-const INITIAL_VALUE_RANGE: Range<FLOAT> = 0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
+const INITIAL_VALUE_OFFSET: Float = 1.0;
+const INITIAL_VALUE_RANGE: Range<Float> = 0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
 
-fn sigmoid(n: FLOAT) -> FLOAT {
+fn sigmoid(n: Float) -> Float {
     1.0 / (1.0 + E.powf(-n))
 }
 
 /// Requires that sigmoid is already sigmoid(x)
-fn d_sigmoid(sigmoid: FLOAT) -> FLOAT {
+fn d_sigmoid(sigmoid: Float) -> Float {
     sigmoid * (1.0 - sigmoid)
 }
 
-fn generate_number(range: Range<FLOAT>) -> FLOAT {
+fn generate_number(range: Range<Float>) -> Float {
     rand::thread_rng().gen_range(range)
 }
 
@@ -46,7 +46,7 @@ fn da_dz(neuron_values: &Matrix) -> Matrix {
 fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> Vec<Matrix> {
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
-    let dc_da = dc_da_for_last_layer(outputs, &expected);
+    let dc_da = dc_da_for_last_layer(outputs, expected);
     let da_dz = da_dz(outputs);
     let dc_dz = dc_da.component_mul(&da_dz);
     (1..layer_count - 1)
@@ -60,8 +60,8 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> V
                 1,
                 &outgoing_weights
                     .column_iter()
-                    .map(|weights| weights.dot(&next_dc_dz))
-                    .collect::<Vec<FLOAT>>(),
+                    .map(|weights| weights.dot(next_dc_dz))
+                    .collect::<Vec<Float>>(),
             );
             let da_dz = crate::da_dz(neuron_activations);
             let dc_dz = dc_da.component_mul(&da_dz);
@@ -125,7 +125,7 @@ fn main() {
     const OUTPUT_SIZE: usize = 5;
     const HIDDEN_LAYER_COUNT: usize = 1;
     const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
-    const LEARNING_RATE: FLOAT = 0.3;
+    const LEARNING_RATE: Float = 0.3;
 
     let input_to_hidden_weights = generate_matrix(HIDDEN_SIZE, INPUT_SIZE);
     let hidden_to_output_weights = generate_matrix(OUTPUT_SIZE, HIDDEN_SIZE);
@@ -143,7 +143,7 @@ fn main() {
     });
     biases.push(generate_matrix(OUTPUT_SIZE, 1));
     let inputs = generate_matrix(INPUT_SIZE, 1);
-    let expected = Matrix::from_fn(OUTPUT_SIZE, 1, |i, _j| i as FLOAT / OUTPUT_SIZE as FLOAT);
+    let expected = Matrix::from_fn(OUTPUT_SIZE, 1, |i, _j| i as Float / OUTPUT_SIZE as Float);
     let mut outputs = Vec::new();
     for _epoch in 0..1000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
