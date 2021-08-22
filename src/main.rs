@@ -121,9 +121,9 @@ fn get_gradients(
 
 fn main() {
     const INPUT_SIZE: usize = 2;
-    const HIDDEN_SIZE: usize = 3;
+    const HIDDEN_SIZE: usize = 10;
     const OUTPUT_SIZE: usize = 5;
-    const HIDDEN_LAYER_COUNT: usize = 1;
+    const HIDDEN_LAYER_COUNT: usize = 2;
     const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
     const LEARNING_RATE: Float = 0.3;
 
