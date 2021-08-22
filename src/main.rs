@@ -57,7 +57,8 @@ fn get_dc_dz(weights: &[DMatrix], activations: &[DMatrix], expected: &DMatrix) -
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
     let dc_da = del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
-    let dc_dz = dc_da.component_mul(&del_activation_wrt_neuron_values(outputs));
+    let da_dz = del_activation_wrt_neuron_values(outputs);
+    let dc_dz = dc_da.component_mul(&da_dz);
     (1..layer_count - 1)
         .rev()
         .fold(vec![dc_dz], |mut dc_dzs, layer| {
@@ -151,7 +152,7 @@ fn main() {
     });
     biases.push(to_dynamic(generate_vector::<OUTPUT_SIZE>()));
     let inputs = to_dynamic(generate_vector::<INPUT_SIZE>());
-    let expected = DMatrix::from_fn(OUTPUT_SIZE, 1, |i, _j| i as FLOAT);
+    let expected = DMatrix::from_fn(OUTPUT_SIZE, 1, |i, _j| i as FLOAT / OUTPUT_SIZE as FLOAT);
     let mut outputs = Vec::new();
     for _epoch in 0..100000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
@@ -168,4 +169,5 @@ fn main() {
     }
     println!("First output: {}", outputs.first().unwrap());
     println!("Last output: {}", outputs.last().unwrap());
+    println!("Expected output: {}", expected);
 }
