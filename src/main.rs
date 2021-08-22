@@ -54,42 +54,36 @@ fn to_dynamic<const ROWS: usize, const COLS: usize>(matrix: Matrix<ROWS, COLS>) 
 }
 
 fn get_gradients(
-    layer_count: usize,
     weights: &Vec<DMatrix>,
     activations: &Vec<DMatrix>,
     expected: &DMatrix,
-) -> Vec<(FLOAT, FLOAT)> {
+) -> Vec<(DMatrix, DMatrix)> {
+    let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
-    let del_cost_wrt_layer_activation_for_last_layer =
-        del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
-    let del_cost_wrt_neuron_values_for_last_layer =
-        del_cost_wrt_layer_activation_for_last_layer.component_mul(&del_activation_wrt_neuron_values(outputs));
-    let penultimate_layer_activations = &activations[layer_count - 2];
-    println!("{}", penultimate_layer_activations);
-    println!("{}", del_cost_wrt_neuron_values_for_last_layer);
-    let del_cost_wrt_weight_for_last_layer =
-        del_cost_wrt_neuron_values_for_last_layer.dot(&penultimate_layer_activations);
-    let del_cost_wrt_bias_for_last_layer = del_cost_wrt_neuron_values_for_last_layer.sum();
-    let (_, gradients) = (1..layer_count - 1).rev().fold(
-        (
-            del_cost_wrt_neuron_values_for_last_layer,
-            vec![(
-                del_cost_wrt_weight_for_last_layer,
-                del_cost_wrt_bias_for_last_layer,
-            )],
-        ),
-        |(last_del_cost_wrt_neuron_values, mut gradients), layer| {
-            let outgoing_weights = weights[layer].transpose();
-            let neuron_activations = &activations[layer];
-            let del_cost_wrt_neuron_values = last_del_cost_wrt_neuron_values.dot(&outgoing_weights)
-                * del_activation_wrt_neuron_values(neuron_activations);
-            let last_activations = &activations[layer - 1];
-            let del_cost_wrt_weight = del_cost_wrt_neuron_values.dot(&last_activations.transpose());
-            let del_cost_wrt_bias = del_cost_wrt_neuron_values.sum();
-            gradients.push((del_cost_wrt_weight, del_cost_wrt_bias));
-            (del_cost_wrt_neuron_values, gradients)
-        },
-    );
+    let dc_da = del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
+    let dc_dz = dc_da.component_mul(&del_activation_wrt_neuron_values(outputs));
+    let (_, gradients) =
+        (1..layer_count - 1)
+            .rev()
+            .fold((dc_dz, vec![]), |(dc_dz, mut gradients), layer| {
+                let outgoing_weights = weights[layer].transpose();
+                let neuron_activations = &activations[layer];
+                let last_activations = &activations[layer];
+                let dc_da = DMatrix::from_column_slice(
+                    outgoing_weights.ncols(),
+                    1,
+                    &outgoing_weights
+                        .column_iter()
+                        .map(|weights| weights.dot(&dc_dz))
+                        .collect::<Vec<FLOAT>>(),
+                );
+                let da_dz = del_activation_wrt_neuron_values(neuron_activations);
+                let dc_dz = dc_da.component_mul(&da_dz);
+                let dc_dw = dc_dz.component_mul(&last_activations.transpose());
+                let dc_db = dc_dz.clone();
+                gradients.push((dc_dw, dc_db));
+                (dc_dz, gradients)
+            });
     gradients.into_iter().rev().collect()
 }
 
@@ -139,10 +133,14 @@ fn main() {
     for _epoch in 0..100000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
         outputs.push(activations.last().unwrap().clone());
-        let gradients = get_gradients(LAYER_COUNT, &weights, &activations, &expected);
-        for ((weight, bias),(gradient_weight, gradient_bias)) in weights.iter_mut().zip(biases.iter_mut()).zip(gradients.iter()) {
-            weight.add_scalar_mut(gradient_weight * LEARNING_RATE);
-            bias.add_scalar_mut(gradient_bias * LEARNING_RATE);
+        let gradients = get_gradients(&weights, &activations, &expected);
+        for ((layer_weights, layer_biases), (gradient_weight, gradient_bias)) in weights
+            .iter_mut()
+            .zip(biases.iter_mut())
+            .zip(gradients.iter())
+        {
+            *layer_weights += gradient_weight * LEARNING_RATE;
+            *layer_biases += gradient_bias * LEARNING_RATE;
         }
     }
     println!("First output: {}", outputs.first().unwrap());
