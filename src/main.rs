@@ -54,8 +54,8 @@ fn to_dynamic<const ROWS: usize, const COLS: usize>(matrix: Matrix<ROWS, COLS>) 
 }
 
 fn get_dc_dz(
-    weights: &Vec<DMatrix>,
-    activations: &Vec<DMatrix>,
+    weights: &[DMatrix],
+    activations: &[DMatrix],
     expected: &DMatrix,
 ) -> Vec<DMatrix> {
     let layer_count = weights.len() + 1;
@@ -86,8 +86,8 @@ fn get_dc_dz(
 fn get_activations(
     layer_count: usize,
     inputs: &DMatrix,
-    weights: &Vec<DMatrix>,
-    biases: &Vec<DMatrix>,
+    weights: &[DMatrix],
+    biases: &[DMatrix],
 ) -> Vec<DMatrix> {
     (0..layer_count - 1).fold(vec![inputs.clone()], |mut acc, layer| {
         let activation = run_activation_function(get_neuron_values(
@@ -101,9 +101,9 @@ fn get_activations(
 }
 
 fn get_gradients(
-    dc_dzs: &Vec<DMatrix>,
-    activations: &Vec<DMatrix>,
-    weights: &Vec<DMatrix>,
+    dc_dzs: &[DMatrix],
+    activations: &[DMatrix],
+    weights: &[DMatrix],
 ) -> Vec<(DMatrix, DMatrix)> {
     let last_activations = activations.iter().rev().skip(1);
     dc_dzs.iter().zip(last_activations).zip(weights).fold(
