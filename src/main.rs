@@ -35,19 +35,19 @@ fn run_activation_function(neuron_values: Matrix) -> Matrix {
 }
 
 /// Cost function is (expected - actual)^2
-fn del_cost_wrt_layer_activation_for_last_layer(actual: &Matrix, expected: &Matrix) -> Matrix {
+fn dc_da_for_last_layer(actual: &Matrix, expected: &Matrix) -> Matrix {
     2.0 * (expected - actual)
 }
 
-fn del_activation_wrt_neuron_values(neuron_values: &Matrix) -> Matrix {
+fn da_dz(neuron_values: &Matrix) -> Matrix {
     neuron_values.map(d_sigmoid)
 }
 
 fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> Vec<Matrix> {
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
-    let dc_da = del_cost_wrt_layer_activation_for_last_layer(outputs, &expected);
-    let da_dz = del_activation_wrt_neuron_values(outputs);
+    let dc_da = dc_da_for_last_layer(outputs, &expected);
+    let da_dz = da_dz(outputs);
     let dc_dz = dc_da.component_mul(&da_dz);
     (1..layer_count - 1)
         .rev()
@@ -63,7 +63,7 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> V
                     .map(|weights| weights.dot(&next_dc_dz))
                     .collect::<Vec<FLOAT>>(),
             );
-            let da_dz = del_activation_wrt_neuron_values(neuron_activations);
+            let da_dz = da_dz(neuron_activations);
             let dc_dz = dc_da.component_mul(&da_dz);
             dc_dzs.push(dc_dz);
             dc_dzs
