@@ -96,7 +96,7 @@ fn get_activations(
     })
 }
 
-fn get_gradients(
+fn get_gradients_from_dc_dz(
     dc_dzs: &[DMatrix],
     activations: &[DMatrix],
     weights: &[DMatrix],
@@ -116,6 +116,15 @@ fn get_gradients(
                 gradients
             },
         )
+}
+
+fn get_gradients(
+    weights: &[DMatrix],
+    activations: &[DMatrix],
+    expected: &DMatrix,
+) -> Vec<(DMatrix, DMatrix)> {
+    let dc_dzs = get_dc_dz(weights, activations, expected);
+    get_gradients_from_dc_dz(&dc_dzs, activations, weights)
 }
 
 fn main() {
@@ -147,8 +156,7 @@ fn main() {
     for _epoch in 0..100000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
         outputs.push(activations.last().unwrap().clone());
-        let dc_dz = get_dc_dz(&weights, &activations, &expected);
-        let gradients = get_gradients(&dc_dz, &activations, &weights);
+        let gradients = get_gradients(&weights, &activations, &expected);
         for ((layer_weights, layer_biases), (gradient_weight, gradient_bias)) in weights
             .iter_mut()
             .zip(biases.iter_mut())
