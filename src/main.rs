@@ -10,6 +10,7 @@ type Vector = DVector<Float>;
 const INITIAL_VALUE_OFFSET: Float = 1.0;
 const INITIAL_VALUE_RANGE: Range<Float> = 0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
 
+/// Computes the sigmoid function.
 fn sigmoid(n: Float) -> Float {
     1.0 / (1.0 + E.powf(-n))
 }
@@ -19,6 +20,7 @@ fn d_sigmoid(sigmoid: Float) -> Float {
     sigmoid * (1.0 - sigmoid)
 }
 
+/// Generates a random number in the range `range`
 fn generate_number(range: Range<Float>) -> Float {
     rand::thread_rng().gen_range(range)
 }
@@ -33,6 +35,7 @@ fn generate_vector(size: usize) -> Vector {
     Vector::from_fn(size, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
 }
 
+/// Runs the neural network for a single layer
 fn activate_layer(last_layer: &Vector, weights: &Matrix, biases: &Vector) -> Vector {
     (weights * last_layer + biases).map(sigmoid)
 }
@@ -43,6 +46,7 @@ fn dc_da_for_last_layer(actual: &Vector, expected: &Vector) -> Vector {
     2.0 * (expected - actual)
 }
 
+/// Gets the derivative of the cost function with respect to the neuron values.
 fn da_dz(neuron_values: &Vector) -> Vector {
     neuron_values.map(d_sigmoid)
 }
@@ -73,6 +77,7 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> V
         })
 }
 
+/// Runs the neuron network forward and returns the activations of the last layer
 fn get_activations(
     layer_count: usize,
     inputs: &Vector,
@@ -86,11 +91,16 @@ fn get_activations(
     })
 }
 
+/// The gradients for a single layer
 struct Gradients {
+    /// The gradients for the weights
     weights: Matrix,
+    /// The gradients for the biases
     biases: Vector,
 }
 
+/// Calculates the gradients for a all layers.
+/// dc_dzs is the vector of derivatives of the cost function with respect to the neuron values from back to front.
 fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<Gradients> {
     let last_activations = activations.iter().rev().skip(1);
     dc_dzs
@@ -110,6 +120,7 @@ fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<
         .collect()
 }
 
+/// Runs backpropagation on the neural network and returns the gradients for each layer
 fn get_gradients(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Gradients> {
     let dc_dzs = get_dc_dz(weights, activations, expected);
     get_gradients_from_dc_dz(dc_dzs, activations)
