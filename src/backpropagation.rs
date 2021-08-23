@@ -3,6 +3,7 @@ use crate::linear_algebra::{Float, Matrix, Vector};
 use std::ops::AddAssign;
 
 /// The gradients for a single layer
+#[derive(Debug, Clone)]
 pub struct Gradients {
     /// The gradients for the weights
     pub weights: Matrix,

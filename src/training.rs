@@ -5,6 +5,7 @@ use crate::gradient_descent::gradient_descent;
 use crate::linear_algebra::Vector;
 use crate::neural_network::{get_activations, Parameters};
 use crate::trained_neural_network::TrainedNeuralNetwork;
+use rayon::prelude::*;
 use std::fmt;
 
 /// A pre-labeled training data set.
@@ -42,16 +43,14 @@ fn train_mini_batch(
     mut parameters: &mut Parameters,
     learning_configuration: &LearningConfiguration,
 ) {
-    let empty_gradients = generate_empty_gradients(parameters);
     let gradients = training_data
-        .iter()
+        .par_iter()
         .map(|training_data| {
             let activations = get_activations(&training_data.inputs, parameters);
             backpropagate(&parameters.weights, &activations, &training_data.labels)
         })
-        .fold(empty_gradients, |gradient_sum, current_gradients| {
-            add_gradients(gradient_sum, current_gradients)
-        });
+        .fold(|| generate_empty_gradients(parameters), add_gradients)
+        .reduce(|| generate_empty_gradients(parameters), add_gradients);
     gradient_descent(&mut parameters, &gradients, learning_configuration);
 }
 
