@@ -76,14 +76,14 @@ fn get_activations(
     weights: &[Matrix],
     biases: &[Matrix],
 ) -> Vec<Matrix> {
-    (0..layer_count - 1).fold(vec![inputs.clone()], |mut acc, layer| {
+    (0..layer_count - 1).fold(vec![inputs.clone()], |mut activations, layer| {
         let activation = run_activation_function(get_neuron_values(
-            &acc[layer],
+            &activations[layer],
             &weights[layer],
             &biases[layer],
         ));
-        acc.push(activation);
-        acc
+        activations.push(activation);
+        activations
     })
 }
 
