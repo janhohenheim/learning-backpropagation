@@ -49,7 +49,6 @@ fn train_mini_batch(
             let activations = get_activations(&training_data.inputs, parameters);
             backpropagate(&parameters.weights, &activations, &training_data.labels)
         })
-        .fold(|| generate_empty_gradients(parameters), add_gradients)
         .reduce(|| generate_empty_gradients(parameters), add_gradients);
     gradient_descent(&mut parameters, &gradients, learning_configuration);
 }
