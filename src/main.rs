@@ -127,59 +127,64 @@ fn backpropagate(weights: &[Matrix], activations: &[Vector], labels: &Vector) ->
     get_gradients_from_dc_dz(dc_dzs, activations)
 }
 
-struct NetworkParameters {
+/// The network's architecture
+struct NetworkArchitecture {
     input_size: usize,
     hidden_size: usize,
     output_size: usize,
     hidden_layer_count: usize,
 }
 
-struct LearningParameters {
+/// Settings for the learning step
+struct LearningConfiguration {
     learning_rate: Float,
 }
 
-fn generate_weights(network_parameters: &NetworkParameters) -> Vec<Matrix> {
+/// Generate random weights
+fn generate_weights(network_architecture: &NetworkArchitecture) -> Vec<Matrix> {
     let input_to_hidden_weights = generate_matrix(
-        network_parameters.hidden_size,
-        network_parameters.input_size,
+        network_architecture.hidden_size,
+        network_architecture.input_size,
     );
     let hidden_to_hidden_weights = iter::repeat_with(|| {
         generate_matrix(
-            network_parameters.hidden_size,
-            network_parameters.hidden_size,
+            network_architecture.hidden_size,
+            network_architecture.hidden_size,
         )
     });
     let hidden_to_output_weights = generate_matrix(
-        network_parameters.output_size,
-        network_parameters.hidden_size,
+        network_architecture.output_size,
+        network_architecture.hidden_size,
     );
     iter::once(input_to_hidden_weights)
         .chain(hidden_to_hidden_weights)
-        .take(network_parameters.hidden_layer_count)
+        .take(network_architecture.hidden_layer_count)
         .chain(iter::once(hidden_to_output_weights))
         .collect()
 }
 
-fn generate_biases(network_parameters: &NetworkParameters) -> Vec<Vector> {
-    let hidden_biases = iter::repeat_with(|| generate_vector(network_parameters.hidden_size));
-    let output_biases = generate_vector(network_parameters.output_size);
+/// Generate random biases
+fn generate_biases(network_architecture: &NetworkArchitecture) -> Vec<Vector> {
+    let hidden_biases = iter::repeat_with(|| generate_vector(network_architecture.hidden_size));
+    let output_biases = generate_vector(network_architecture.output_size);
     hidden_biases
-        .take(network_parameters.hidden_layer_count)
+        .take(network_architecture.hidden_layer_count)
         .chain(iter::once(output_biases))
         .collect()
 }
 
-fn generate_parameters(network_parameters: &NetworkParameters) -> Parameters {
+/// Generate random parameters
+fn generate_parameters(network_architecture: &NetworkArchitecture) -> Parameters {
     Parameters {
-        weights: generate_weights(network_parameters),
-        biases: generate_biases(network_parameters),
+        weights: generate_weights(network_architecture),
+        biases: generate_biases(network_architecture),
     }
 }
 
 fn gradient_descent(
     parameters: &mut Parameters,
     gradients: &[Gradients],
-    learning_parameters: &LearningParameters,
+    learning_configuration: &LearningConfiguration,
 ) {
     for ((layer_weights, layer_biases), gradients) in parameters
         .weights
@@ -187,8 +192,8 @@ fn gradient_descent(
         .zip(parameters.biases.iter_mut())
         .zip(gradients)
     {
-        *layer_weights += &gradients.weights * learning_parameters.learning_rate;
-        *layer_biases += &gradients.biases * learning_parameters.learning_rate;
+        *layer_weights += &gradients.weights * learning_configuration.learning_rate;
+        *layer_biases += &gradients.biases * learning_configuration.learning_rate;
     }
 }
 
@@ -202,10 +207,10 @@ struct TrainingData {
     labels: Vector,
 }
 
-fn generate_training_data(network_parameters: &NetworkParameters) -> TrainingData {
-    let inputs = generate_vector(network_parameters.input_size);
-    let labels = Vector::from_fn(network_parameters.output_size, |i, _j| {
-        i as Float / network_parameters.output_size as Float
+fn generate_training_data(network_architecture: &NetworkArchitecture) -> TrainingData {
+    let inputs = generate_vector(network_architecture.input_size);
+    let labels = Vector::from_fn(network_architecture.output_size, |i, _j| {
+        i as Float / network_architecture.output_size as Float
     });
     TrainingData { inputs, labels }
 }
@@ -213,26 +218,26 @@ fn generate_training_data(network_parameters: &NetworkParameters) -> TrainingDat
 fn train(
     training_data: &TrainingData,
     mut parameters: &mut Parameters,
-    learning_parameters: &LearningParameters,
+    learning_configuration: &LearningConfiguration,
 ) -> Vector {
     let activations = get_activations(&training_data.inputs, parameters);
     let gradients = backpropagate(&parameters.weights, &activations, &training_data.labels);
-    gradient_descent(&mut parameters, &gradients, learning_parameters);
+    gradient_descent(&mut parameters, &gradients, learning_configuration);
     activations.last().unwrap().clone()
 }
 
 fn main() {
-    let network_parameters = NetworkParameters {
+    let network_architecture = NetworkArchitecture {
         input_size: 2,
         hidden_size: 10,
         output_size: 5,
         hidden_layer_count: 2,
     };
-    let learning_parameters = LearningParameters { learning_rate: 0.3 };
-    let mut parameters = generate_parameters(&network_parameters);
-    let training_data = generate_training_data(&network_parameters);
+    let learning_configuration = LearningConfiguration { learning_rate: 0.3 };
+    let mut parameters = generate_parameters(&network_architecture);
+    let training_data = generate_training_data(&network_architecture);
     let outputs =
-        iter::repeat_with(|| train(&training_data, &mut parameters, &learning_parameters))
+        iter::repeat_with(|| train(&training_data, &mut parameters, &learning_configuration))
             .take(10_000)
             .collect::<Vec<_>>();
     println!("First output: {}", outputs.first().unwrap());
