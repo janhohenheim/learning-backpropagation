@@ -11,4 +11,6 @@ pub struct NetworkArchitecture {
 /// Settings for the learning step
 pub struct LearningConfiguration {
     pub learning_rate: Float,
+    pub mini_batch_size: usize,
+    pub epochs: usize,
 }

@@ -1,5 +1,6 @@
 use crate::backpropagation::{backpropagate, Gradients};
-use crate::configuration::LearningConfiguration;
+use crate::configuration::{LearningConfiguration, NetworkArchitecture};
+use crate::generation::generate_parameters;
 use crate::gradient_descent::gradient_descent;
 use crate::neural_network::{get_activations, Parameters};
 use crate::training_data::TrainingData;
@@ -21,7 +22,7 @@ fn add_gradients(mut gradient_sum: Vec<Gradients>, summand: Vec<Gradients>) -> V
     gradient_sum
 }
 
-pub fn train(
+fn train_mini_batch(
     training_data: &[TrainingData],
     mut parameters: &mut Parameters,
     learning_configuration: &LearningConfiguration,
@@ -37,4 +38,28 @@ pub fn train(
             add_gradients(gradient_sum, current_gradients)
         });
     gradient_descent(&mut parameters, &gradients, learning_configuration);
+}
+
+fn train_epoch(
+    training_data: &[TrainingData],
+    mut parameters: &mut Parameters,
+    learning_configuration: &LearningConfiguration,
+) {
+    training_data
+        .chunks(learning_configuration.mini_batch_size)
+        .for_each(|mini_batch| {
+            train_mini_batch(mini_batch, &mut parameters, learning_configuration);
+        });
+}
+
+pub fn train(
+    training_data: &[TrainingData],
+    network_architecture: &NetworkArchitecture,
+    learning_configuration: &LearningConfiguration,
+) -> Parameters {
+    let mut parameters = generate_parameters(network_architecture);
+    for _ in 0..learning_configuration.epochs {
+        train_epoch(training_data, &mut parameters, learning_configuration);
+    }
+    parameters
 }
