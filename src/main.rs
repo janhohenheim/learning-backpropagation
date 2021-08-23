@@ -26,6 +26,7 @@ fn generate_number(range: Range<Float>) -> Float {
 fn generate_matrix(rows: usize, cols: usize) -> Matrix {
     Matrix::from_fn(rows, cols, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
 }
+
 fn generate_vector(size: usize) -> Vector {
     Vector::from_fn(size, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
 }
@@ -47,6 +48,7 @@ fn da_dz(neuron_values: &Vector) -> Vector {
     neuron_values.map(d_sigmoid)
 }
 
+/// Gets the derivative of the cost function with respect to the neuron values from back to front
 fn get_dc_dz(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Vector> {
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
@@ -89,7 +91,12 @@ fn get_activations(
     })
 }
 
-fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<(Matrix, Vector)> {
+struct Gradients {
+    weights: Matrix,
+    biases: Vector,
+}
+
+fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<Gradients> {
     let last_activations = activations.iter().rev().skip(1);
     dc_dzs
         .into_iter()
@@ -99,16 +106,16 @@ fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<
             // Think of last_activation as the *from* and dc_dz as the *to* of the weight.
             let weight_gradient = &dc_dz * last_activation.transpose();
             let bias_gradient = dc_dz;
-            (weight_gradient, bias_gradient)
+            Gradients {
+                weights: weight_gradient,
+                biases: bias_gradient,
+            }
         })
+        .rev()
         .collect()
 }
 
-fn get_gradients(
-    weights: &[Matrix],
-    activations: &[Vector],
-    expected: &Vector,
-) -> Vec<(Matrix, Vector)> {
+fn get_gradients(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Gradients> {
     let dc_dzs = get_dc_dz(weights, activations, expected);
     get_gradients_from_dc_dz(dc_dzs, activations)
 }
@@ -143,13 +150,11 @@ fn main() {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
         outputs.push(activations.last().unwrap().clone());
         let gradients = get_gradients(&weights, &activations, &expected);
-        for ((layer_weights, layer_biases), (gradient_weight, gradient_bias)) in weights
-            .iter_mut()
-            .zip(biases.iter_mut())
-            .zip(gradients.iter().rev())
+        for ((layer_weights, layer_biases), gradients) in
+            weights.iter_mut().zip(biases.iter_mut()).zip(gradients)
         {
-            *layer_weights += gradient_weight * LEARNING_RATE;
-            *layer_biases += gradient_bias * LEARNING_RATE;
+            *layer_weights += &gradients.weights * LEARNING_RATE;
+            *layer_biases += &gradients.biases * LEARNING_RATE;
         }
     }
     println!("First output: {}", outputs.first().unwrap());
