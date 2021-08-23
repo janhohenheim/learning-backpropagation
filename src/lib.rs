@@ -8,4 +8,3 @@ pub mod mnist;
 pub(crate) mod neural_network;
 pub mod trained_neural_network;
 pub mod training;
-pub mod training_data;
