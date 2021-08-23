@@ -1,34 +1,8 @@
-use learning_backpropagation::backpropagation::backpropagate;
 use learning_backpropagation::configuration::{LearningConfiguration, NetworkArchitecture};
-use learning_backpropagation::generation::{generate_parameters, generate_vector};
-use learning_backpropagation::gradient_descent::gradient_descent;
-use learning_backpropagation::linear_algebra::{Float, Vector};
-use learning_backpropagation::neural_network::{get_activations, Parameters};
+use learning_backpropagation::generation::generate_parameters;
+use learning_backpropagation::training::train;
+use learning_backpropagation::training_data::generate_training_data;
 use std::iter;
-
-struct TrainingData {
-    inputs: Vector,
-    labels: Vector,
-}
-
-fn generate_training_data(network_architecture: &NetworkArchitecture) -> TrainingData {
-    let inputs = generate_vector(network_architecture.input_size);
-    let labels = Vector::from_fn(network_architecture.output_size, |i, _j| {
-        i as Float / network_architecture.output_size as Float
-    });
-    TrainingData { inputs, labels }
-}
-
-fn train(
-    training_data: &TrainingData,
-    mut parameters: &mut Parameters,
-    learning_configuration: &LearningConfiguration,
-) -> Vector {
-    let activations = get_activations(&training_data.inputs, parameters);
-    let gradients = backpropagate(&parameters.weights, &activations, &training_data.labels);
-    gradient_descent(&mut parameters, &gradients, learning_configuration);
-    activations.last().unwrap().clone()
-}
 
 fn main() {
     let network_architecture = NetworkArchitecture {
