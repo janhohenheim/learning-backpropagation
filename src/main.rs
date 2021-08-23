@@ -1,6 +1,7 @@
 use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use std::f32::consts::E;
+use std::iter;
 use std::ops::Range;
 
 type Float = f32;
@@ -126,41 +127,80 @@ fn get_gradients(weights: &[Matrix], activations: &[Vector], expected: &Vector) 
     get_gradients_from_dc_dz(dc_dzs, activations)
 }
 
-fn main() {
-    const INPUT_SIZE: usize = 2;
-    const HIDDEN_SIZE: usize = 10;
-    const OUTPUT_SIZE: usize = 5;
-    const HIDDEN_LAYER_COUNT: usize = 2;
-    const LAYER_COUNT: usize = 2 + HIDDEN_LAYER_COUNT;
-    const LEARNING_RATE: Float = 0.3;
+struct NetworkParameters {
+    input_size: usize,
+    hidden_size: usize,
+    output_size: usize,
+    hidden_layer_count: usize,
+    learning_rate: Float,
+}
 
-    let input_to_hidden_weights = generate_matrix(HIDDEN_SIZE, INPUT_SIZE);
-    let hidden_to_output_weights = generate_matrix(OUTPUT_SIZE, HIDDEN_SIZE);
+impl NetworkParameters {
+    fn total_layer_count(&self) -> usize {
+        self.hidden_layer_count + 2
+    }
+}
 
-    let mut weights =
-        (0..HIDDEN_LAYER_COUNT - 1).fold(vec![input_to_hidden_weights], |mut acc, _layer| {
-            acc.push(generate_matrix(HIDDEN_SIZE, HIDDEN_SIZE));
+fn generate_weights(network_parameters: &NetworkParameters) -> Vec<Matrix> {
+    let input_to_hidden_weights = generate_matrix(
+        network_parameters.hidden_size,
+        network_parameters.input_size,
+    );
+    let hidden_to_output_weights = generate_matrix(
+        network_parameters.output_size,
+        network_parameters.hidden_size,
+    );
+
+    let mut weights = (0..network_parameters.hidden_layer_count - 1).fold(
+        vec![input_to_hidden_weights],
+        |mut acc, _layer| {
+            acc.push(generate_matrix(
+                network_parameters.hidden_size,
+                network_parameters.hidden_size,
+            ));
             acc
-        });
+        },
+    );
     weights.push(hidden_to_output_weights);
+    weights
+}
 
-    let mut biases = (0..HIDDEN_LAYER_COUNT).fold(Vec::new(), |mut acc, _layer| {
-        acc.push(generate_vector(HIDDEN_SIZE));
-        acc
+fn generate_biases(network_parameters: &NetworkParameters) -> Vec<Vector> {
+    iter::repeat_with(|| generate_vector(network_parameters.hidden_size))
+        .take(network_parameters.hidden_layer_count)
+        .chain(iter::once(generate_vector(network_parameters.output_size)))
+        .collect()
+}
+
+fn main() {
+    let network_parameters = NetworkParameters {
+        input_size: 2,
+        hidden_size: 10,
+        output_size: 5,
+        hidden_layer_count: 2,
+        learning_rate: 0.3,
+    };
+    let mut weights = generate_weights(&network_parameters);
+    let mut biases = generate_biases(&network_parameters);
+    let inputs = generate_vector(network_parameters.input_size);
+    let expected = Vector::from_fn(network_parameters.output_size, |i, _j| {
+        i as Float / network_parameters.output_size as Float
     });
-    biases.push(generate_vector(OUTPUT_SIZE));
-    let inputs = generate_vector(INPUT_SIZE);
-    let expected = Vector::from_fn(OUTPUT_SIZE, |i, _j| i as Float / OUTPUT_SIZE as Float);
     let mut outputs = Vec::new();
     for _epoch in 0..1000 {
-        let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
+        let activations = get_activations(
+            network_parameters.total_layer_count(),
+            &inputs,
+            &weights,
+            &biases,
+        );
         outputs.push(activations.last().unwrap().clone());
         let gradients = get_gradients(&weights, &activations, &expected);
         for ((layer_weights, layer_biases), gradients) in
             weights.iter_mut().zip(biases.iter_mut()).zip(gradients)
         {
-            *layer_weights += &gradients.weights * LEARNING_RATE;
-            *layer_biases += &gradients.biases * LEARNING_RATE;
+            *layer_weights += &gradients.weights * network_parameters.learning_rate;
+            *layer_biases += &gradients.biases * network_parameters.learning_rate;
         }
     }
     println!("First output: {}", outputs.first().unwrap());
