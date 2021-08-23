@@ -92,7 +92,8 @@ fn get_gradients_from_dc_dz(dc_dzs: &[Matrix], activations: &[Matrix]) -> Vec<(M
     dc_dzs.iter().zip(last_activations).fold(
         Vec::new(),
         |mut gradients, (dc_dz, last_activation)| {
-            // Same as outer product
+            // [Outer product](https://en.wikipedia.org/wiki/Outer_product). Same shape as incoming weights.
+            // Think of last_activation as the *from* and dc_dz as the *to* of the weight.
             let weight_gradient = dc_dz * last_activation.transpose();
             let bias_gradient = dc_dz.clone();
             gradients.push((weight_gradient, bias_gradient));
