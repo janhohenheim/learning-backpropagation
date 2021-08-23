@@ -4,6 +4,8 @@ use learning_backpropagation::training::train;
 use learning_backpropagation::training_data::generate_training_data;
 use std::iter;
 
+const EPOCHS: usize = 10_000;
+
 fn main() {
     let network_architecture = NetworkArchitecture {
         input_size: 2,
@@ -16,7 +18,7 @@ fn main() {
     let training_data = generate_training_data(&network_architecture);
     let outputs =
         iter::repeat_with(|| train(&training_data, &mut parameters, &learning_configuration))
-            .take(10_000)
+            .take(EPOCHS)
             .collect::<Vec<_>>();
     println!("First output: {}", outputs.first().unwrap());
     println!("Last output: {}", outputs.last().unwrap());

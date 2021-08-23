@@ -2,6 +2,7 @@ use crate::configuration::NetworkArchitecture;
 use crate::generation::generate_vector;
 use crate::linear_algebra::{Float, Vector};
 
+/// A pre-labeled training data set.
 pub struct TrainingData {
     pub inputs: Vector,
     pub labels: Vector,
