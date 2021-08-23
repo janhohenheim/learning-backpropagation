@@ -87,19 +87,19 @@ fn get_activations(
     })
 }
 
-fn get_gradients_from_dc_dz(dc_dzs: &[Matrix], activations: &[Matrix]) -> Vec<(Matrix, Matrix)> {
+fn get_gradients_from_dc_dz(dc_dzs: Vec<Matrix>, activations: &[Matrix]) -> Vec<(Matrix, Matrix)> {
     let last_activations = activations.iter().rev().skip(1);
-    dc_dzs.iter().zip(last_activations).fold(
-        Vec::new(),
-        |mut gradients, (dc_dz, last_activation)| {
+    dc_dzs
+        .into_iter()
+        .zip(last_activations)
+        .map(|(dc_dz, last_activation)| {
             // [Outer product](https://en.wikipedia.org/wiki/Outer_product). Same shape as incoming weights.
             // Think of last_activation as the *from* and dc_dz as the *to* of the weight.
-            let weight_gradient = dc_dz * last_activation.transpose();
-            let bias_gradient = dc_dz.clone();
-            gradients.push((weight_gradient, bias_gradient));
-            gradients
-        },
-    )
+            let weight_gradient = &dc_dz * last_activation.transpose();
+            let bias_gradient = dc_dz;
+            (weight_gradient, bias_gradient)
+        })
+        .collect()
 }
 
 fn get_gradients(
@@ -108,7 +108,7 @@ fn get_gradients(
     expected: &Matrix,
 ) -> Vec<(Matrix, Matrix)> {
     let dc_dzs = get_dc_dz(weights, activations, expected);
-    get_gradients_from_dc_dz(&dc_dzs, activations)
+    get_gradients_from_dc_dz(dc_dzs, activations)
 }
 
 fn main() {
