@@ -1,10 +1,11 @@
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use std::f32::consts::E;
 use std::ops::Range;
 
 type Float = f32;
 type Matrix = DMatrix<Float>;
+type Vector = DVector<Float>;
 
 const INITIAL_VALUE_OFFSET: Float = 1.0;
 const INITIAL_VALUE_RANGE: Range<Float> = 0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
@@ -25,25 +26,28 @@ fn generate_number(range: Range<Float>) -> Float {
 fn generate_matrix(rows: usize, cols: usize) -> Matrix {
     Matrix::from_fn(rows, cols, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
 }
+fn generate_vector(size: usize) -> Vector {
+    Vector::from_fn(size, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
+}
 
-fn get_neuron_values(last_layer: &Matrix, weights: &Matrix, biases: &Matrix) -> Matrix {
+fn get_neuron_values(last_layer: &Vector, weights: &Matrix, biases: &Vector) -> Vector {
     weights * last_layer + biases
 }
 
-fn run_activation_function(neuron_values: Matrix) -> Matrix {
+fn run_activation_function(neuron_values: Vector) -> Vector {
     neuron_values.map(sigmoid)
 }
 
 /// Cost function is (expected - actual)^2
-fn dc_da_for_last_layer(actual: &Matrix, expected: &Matrix) -> Matrix {
+fn dc_da_for_last_layer(actual: &Vector, expected: &Vector) -> Vector {
     2.0 * (expected - actual)
 }
 
-fn da_dz(neuron_values: &Matrix) -> Matrix {
+fn da_dz(neuron_values: &Vector) -> Vector {
     neuron_values.map(d_sigmoid)
 }
 
-fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> Vec<Matrix> {
+fn get_dc_dz(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Vector> {
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
     let dc_da = dc_da_for_last_layer(outputs, expected);
@@ -55,10 +59,8 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> V
             let outgoing_weights = &weights[layer];
             let neuron_activations = &activations[layer];
             let next_dc_dz = dc_dzs.last().unwrap();
-            let dc_da = Matrix::from_column_slice(
-                outgoing_weights.ncols(),
-                1,
-                &outgoing_weights
+            let dc_da = Vector::from(
+                outgoing_weights
                     .column_iter()
                     .map(|weights| weights.dot(next_dc_dz))
                     .collect::<Vec<Float>>(),
@@ -72,10 +74,10 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Matrix], expected: &Matrix) -> V
 
 fn get_activations(
     layer_count: usize,
-    inputs: &Matrix,
+    inputs: &Vector,
     weights: &[Matrix],
-    biases: &[Matrix],
-) -> Vec<Matrix> {
+    biases: &[Vector],
+) -> Vec<Vector> {
     (0..layer_count - 1).fold(vec![inputs.clone()], |mut activations, layer| {
         let activation = run_activation_function(get_neuron_values(
             &activations[layer],
@@ -87,7 +89,7 @@ fn get_activations(
     })
 }
 
-fn get_gradients_from_dc_dz(dc_dzs: Vec<Matrix>, activations: &[Matrix]) -> Vec<(Matrix, Matrix)> {
+fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<(Matrix, Vector)> {
     let last_activations = activations.iter().rev().skip(1);
     dc_dzs
         .into_iter()
@@ -104,9 +106,9 @@ fn get_gradients_from_dc_dz(dc_dzs: Vec<Matrix>, activations: &[Matrix]) -> Vec<
 
 fn get_gradients(
     weights: &[Matrix],
-    activations: &[Matrix],
-    expected: &Matrix,
-) -> Vec<(Matrix, Matrix)> {
+    activations: &[Vector],
+    expected: &Vector,
+) -> Vec<(Matrix, Vector)> {
     let dc_dzs = get_dc_dz(weights, activations, expected);
     get_gradients_from_dc_dz(dc_dzs, activations)
 }
@@ -130,12 +132,12 @@ fn main() {
     weights.push(hidden_to_output_weights);
 
     let mut biases = (0..HIDDEN_LAYER_COUNT).fold(Vec::new(), |mut acc, _layer| {
-        acc.push(generate_matrix(HIDDEN_SIZE, 1));
+        acc.push(generate_vector(HIDDEN_SIZE));
         acc
     });
-    biases.push(generate_matrix(OUTPUT_SIZE, 1));
-    let inputs = generate_matrix(INPUT_SIZE, 1);
-    let expected = Matrix::from_fn(OUTPUT_SIZE, 1, |i, _j| i as Float / OUTPUT_SIZE as Float);
+    biases.push(generate_vector(OUTPUT_SIZE));
+    let inputs = generate_vector(INPUT_SIZE);
+    let expected = Vector::from_fn(OUTPUT_SIZE, |i, _j| i as Float / OUTPUT_SIZE as Float);
     let mut outputs = Vec::new();
     for _epoch in 0..1000 {
         let activations = get_activations(LAYER_COUNT, &inputs, &weights, &biases);
