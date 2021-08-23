@@ -1,9 +1,10 @@
-pub mod backpropagation;
+pub(crate) mod backpropagation;
 pub mod configuration;
-pub mod functions;
-pub mod generation;
-pub mod gradient_descent;
-pub mod linear_algebra;
-pub mod neural_network;
+pub(crate) mod functions;
+pub(crate) mod generation;
+pub(crate) mod gradient_descent;
+pub(crate) mod linear_algebra;
+pub(crate) mod neural_network;
+pub mod trained_neural_network;
 pub mod training;
 pub mod training_data;

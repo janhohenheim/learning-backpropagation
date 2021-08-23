@@ -5,22 +5,22 @@ use rand::Rng;
 use std::iter;
 use std::ops::Range;
 
-const INITIAL_VALUE_OFFSET: Float = 1.0;
-const INITIAL_VALUE_RANGE: Range<Float> = 0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
-
 /// Generates a random number in the range `range`
-fn generate_number(range: Range<Float>) -> Float {
-    rand::thread_rng().gen_range(range)
+pub fn generate_number() -> Float {
+    const INITIAL_VALUE_OFFSET: Float = 1.0;
+    const INITIAL_VALUE_RANGE: Range<Float> =
+        0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
+    rand::thread_rng().gen_range(INITIAL_VALUE_RANGE)
 }
 
 /// Generates a random matrix of size `rows` x `cols`
 fn generate_matrix(rows: usize, cols: usize) -> Matrix {
-    Matrix::from_fn(rows, cols, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
+    Matrix::from_fn(rows, cols, |_i, _j| generate_number())
 }
 
 /// Generates a random vector of size `size`
 pub fn generate_vector(size: usize) -> Vector {
-    Vector::from_fn(size, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
+    Vector::from_fn(size, |_i, _j| generate_number())
 }
 
 /// Generate random weights

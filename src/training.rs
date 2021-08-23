@@ -3,6 +3,7 @@ use crate::configuration::{LearningConfiguration, NetworkArchitecture};
 use crate::generation::generate_parameters;
 use crate::gradient_descent::gradient_descent;
 use crate::neural_network::{get_activations, Parameters};
+use crate::trained_neural_network::TrainedNeuralNetwork;
 use crate::training_data::TrainingData;
 
 fn generate_empty_gradients(parameters: &Parameters) -> Vec<Gradients> {
@@ -56,10 +57,10 @@ pub fn train(
     training_data: &[TrainingData],
     network_architecture: &NetworkArchitecture,
     learning_configuration: &LearningConfiguration,
-) -> Parameters {
+) -> TrainedNeuralNetwork {
     let mut parameters = generate_parameters(network_architecture);
     for _ in 0..learning_configuration.epochs {
         train_epoch(training_data, &mut parameters, learning_configuration);
     }
-    parameters
+    TrainedNeuralNetwork::new(parameters)
 }

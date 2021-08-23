@@ -1,5 +1,4 @@
 use learning_backpropagation::configuration::{LearningConfiguration, NetworkArchitecture};
-use learning_backpropagation::neural_network::get_activations;
 use learning_backpropagation::training::train;
 use learning_backpropagation::training_data::generate_training_data;
 
@@ -19,15 +18,14 @@ const LEARNING_CONFIGURATION: LearningConfiguration = LearningConfiguration {
 fn main() {
     let training_data = generate_training_data(&NETWORK_ARCHITECTURE);
 
-    let parameters = train(
+    let neural_network = train(
         &training_data,
         &NETWORK_ARCHITECTURE,
         &LEARNING_CONFIGURATION,
     );
 
     for training_data in training_data.iter() {
-        let activations = get_activations(&training_data.inputs, &parameters);
-        let outputs = activations.last().unwrap();
+        let outputs = neural_network.run(&training_data.inputs);
         println!("{}", training_data);
         println!("output: {}", outputs);
     }
