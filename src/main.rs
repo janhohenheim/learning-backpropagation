@@ -193,13 +193,14 @@ fn main() {
     let expected = Vector::from_fn(network_parameters.output_size, |i, _j| {
         i as Float / network_parameters.output_size as Float
     });
-    let mut outputs = Vec::new();
-    for _epoch in 0..1000 {
+    let outputs = iter::repeat_with(|| {
         let activations = get_activations(&inputs, &weights, &biases);
-        outputs.push(activations.last().unwrap().clone());
         let gradients = backpropagate(&weights, &activations, &expected);
         gradient_descent(&mut weights, &mut biases, &gradients, &learning_parameters);
-    }
+        activations.last().unwrap().clone()
+    })
+    .take(1000)
+    .collect::<Vec<_>>();
     println!("First output: {}", outputs.first().unwrap());
     println!("Last output: {}", outputs.last().unwrap());
     println!("Expected output: {}", expected);
