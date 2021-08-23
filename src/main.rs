@@ -24,10 +24,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         &LEARNING_CONFIGURATION,
     );
 
-    for training_data in training_data.iter() {
-        let outputs = neural_network.run(&training_data.inputs);
-        println!("{}", training_data);
+    let testing_data = load_training_data("./mnist_handwritten_test.json")?;
+    for testing_data in testing_data.iter() {
+        let outputs = neural_network.run(&testing_data.inputs);
+        println!("label: {}", testing_data.labels);
         println!("output: {}", outputs);
+        println!("------");
     }
     Ok(())
 }
