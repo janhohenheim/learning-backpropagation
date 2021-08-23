@@ -43,8 +43,8 @@ fn activate_layer(last_layer: &Vector, weights: &Matrix, biases: &Vector) -> Vec
 
 /// Gets the derivative of the cost function with respect to the neuron activations.
 /// Cost function is (expected - actual)^2
-fn dc_da_for_last_layer(actual: &Vector, expected: &Vector) -> Vector {
-    2.0 * (expected - actual)
+fn dc_da_for_last_layer(actual: &Vector, labels: &Vector) -> Vector {
+    2.0 * (labels - actual)
 }
 
 /// Gets the derivative of the cost function with respect to the neuron values.
@@ -53,10 +53,10 @@ fn da_dz(neuron_values: &Vector) -> Vector {
 }
 
 /// Gets the derivative of the cost function with respect to the neuron values from back to front
-fn get_dc_dz(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Vector> {
+fn get_dc_dz(weights: &[Matrix], activations: &[Vector], labels: &Vector) -> Vec<Vector> {
     let layer_count = weights.len() + 1;
     let outputs = activations.last().unwrap();
-    let dc_da = dc_da_for_last_layer(outputs, expected);
+    let dc_da = dc_da_for_last_layer(outputs, labels);
     let da_dz = da_dz(outputs);
     let dc_dz = dc_da.component_mul(&da_dz);
     (1..layer_count - 1)
@@ -122,12 +122,8 @@ fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<
 }
 
 /// Runs backpropagation on the neural network and returns the gradients for each layer
-fn backpropagate(
-    parameters: &Parameters,
-    activations: &[Vector],
-    expected: &Vector,
-) -> Vec<Gradients> {
-    let dc_dzs = get_dc_dz(&parameters.weights, activations, expected);
+fn backpropagate(weights: &[Matrix], activations: &[Vector], labels: &Vector) -> Vec<Gradients> {
+    let dc_dzs = get_dc_dz(weights, activations, labels);
     get_gradients_from_dc_dz(dc_dzs, activations)
 }
 
@@ -201,6 +197,19 @@ struct Parameters {
     biases: Vec<Vector>,
 }
 
+struct TrainingData {
+    inputs: Vector,
+    labels: Vector,
+}
+
+fn generate_training_data(network_parameters: &NetworkParameters) -> TrainingData {
+    let inputs = generate_vector(network_parameters.input_size);
+    let labels = Vector::from_fn(network_parameters.output_size, |i, _j| {
+        i as Float / network_parameters.output_size as Float
+    });
+    TrainingData { inputs, labels }
+}
+
 fn main() {
     let network_parameters = NetworkParameters {
         input_size: 2,
@@ -210,13 +219,10 @@ fn main() {
     };
     let learning_parameters = LearningParameters { learning_rate: 0.3 };
     let mut parameters = generate_parameters(&network_parameters);
-    let inputs = generate_vector(network_parameters.input_size);
-    let expected = Vector::from_fn(network_parameters.output_size, |i, _j| {
-        i as Float / network_parameters.output_size as Float
-    });
+    let training_data = generate_training_data(&network_parameters);
     let outputs = iter::repeat_with(|| {
-        let activations = get_activations(&inputs, &parameters);
-        let gradients = backpropagate(&parameters, &activations, &expected);
+        let activations = get_activations(&training_data.inputs, &parameters);
+        let gradients = backpropagate(&parameters.weights, &activations, &training_data.labels);
         gradient_descent(&mut parameters, &gradients, &learning_parameters);
         activations.last().unwrap().clone()
     })
@@ -224,5 +230,5 @@ fn main() {
     .collect::<Vec<_>>();
     println!("First output: {}", outputs.first().unwrap());
     println!("Last output: {}", outputs.last().unwrap());
-    println!("Expected output: {}", expected);
+    println!("Expected output: {}", training_data.labels);
 }
