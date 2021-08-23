@@ -210,6 +210,17 @@ fn generate_training_data(network_parameters: &NetworkParameters) -> TrainingDat
     TrainingData { inputs, labels }
 }
 
+fn train(
+    training_data: &TrainingData,
+    mut parameters: &mut Parameters,
+    learning_parameters: &LearningParameters,
+) -> Vector {
+    let activations = get_activations(&training_data.inputs, parameters);
+    let gradients = backpropagate(&parameters.weights, &activations, &training_data.labels);
+    gradient_descent(&mut parameters, &gradients, learning_parameters);
+    activations.last().unwrap().clone()
+}
+
 fn main() {
     let network_parameters = NetworkParameters {
         input_size: 2,
@@ -220,14 +231,10 @@ fn main() {
     let learning_parameters = LearningParameters { learning_rate: 0.3 };
     let mut parameters = generate_parameters(&network_parameters);
     let training_data = generate_training_data(&network_parameters);
-    let outputs = iter::repeat_with(|| {
-        let activations = get_activations(&training_data.inputs, &parameters);
-        let gradients = backpropagate(&parameters.weights, &activations, &training_data.labels);
-        gradient_descent(&mut parameters, &gradients, &learning_parameters);
-        activations.last().unwrap().clone()
-    })
-    .take(10_000)
-    .collect::<Vec<_>>();
+    let outputs =
+        iter::repeat_with(|| train(&training_data, &mut parameters, &learning_parameters))
+            .take(10_000)
+            .collect::<Vec<_>>();
     println!("First output: {}", outputs.first().unwrap());
     println!("Last output: {}", outputs.last().unwrap());
     println!("Expected output: {}", training_data.labels);
