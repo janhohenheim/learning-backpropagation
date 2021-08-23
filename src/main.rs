@@ -79,13 +79,9 @@ fn get_dc_dz(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> V
 }
 
 /// Runs the neuron network forward and returns the activations of the last layer
-fn get_activations(
-    layer_count: usize,
-    inputs: &Vector,
-    weights: &[Matrix],
-    biases: &[Vector],
-) -> Vec<Vector> {
-    (0..layer_count - 1).fold(vec![inputs.clone()], |mut activations, layer| {
+fn get_activations(inputs: &Vector, weights: &[Matrix], biases: &[Vector]) -> Vec<Vector> {
+    let non_input_layers = weights.len();
+    (0..non_input_layers).fold(vec![inputs.clone()], |mut activations, layer| {
         let activation = activate_layer(&activations[layer], &weights[layer], &biases[layer]);
         activations.push(activation);
         activations
@@ -122,7 +118,7 @@ fn get_gradients_from_dc_dz(dc_dzs: Vec<Vector>, activations: &[Vector]) -> Vec<
 }
 
 /// Runs backpropagation on the neural network and returns the gradients for each layer
-fn get_gradients(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Gradients> {
+fn backpropagate(weights: &[Matrix], activations: &[Vector], expected: &Vector) -> Vec<Gradients> {
     let dc_dzs = get_dc_dz(weights, activations, expected);
     get_gradients_from_dc_dz(dc_dzs, activations)
 }
@@ -132,13 +128,10 @@ struct NetworkParameters {
     hidden_size: usize,
     output_size: usize,
     hidden_layer_count: usize,
-    learning_rate: Float,
 }
 
-impl NetworkParameters {
-    fn total_layer_count(&self) -> usize {
-        self.hidden_layer_count + 2
-    }
+struct LearningParameters {
+    learning_rate: Float,
 }
 
 fn generate_weights(network_parameters: &NetworkParameters) -> Vec<Matrix> {
@@ -172,14 +165,28 @@ fn generate_biases(network_parameters: &NetworkParameters) -> Vec<Vector> {
         .collect()
 }
 
+fn gradient_descent(
+    weights: &mut [Matrix],
+    biases: &mut [Vector],
+    gradients: &[Gradients],
+    learning_parameters: &LearningParameters,
+) {
+    for ((layer_weights, layer_biases), gradients) in
+        weights.iter_mut().zip(biases.iter_mut()).zip(gradients)
+    {
+        *layer_weights += &gradients.weights * learning_parameters.learning_rate;
+        *layer_biases += &gradients.biases * learning_parameters.learning_rate;
+    }
+}
+
 fn main() {
     let network_parameters = NetworkParameters {
         input_size: 2,
         hidden_size: 10,
         output_size: 5,
         hidden_layer_count: 2,
-        learning_rate: 0.3,
     };
+    let learning_parameters = LearningParameters { learning_rate: 0.3 };
     let mut weights = generate_weights(&network_parameters);
     let mut biases = generate_biases(&network_parameters);
     let inputs = generate_vector(network_parameters.input_size);
@@ -188,20 +195,10 @@ fn main() {
     });
     let mut outputs = Vec::new();
     for _epoch in 0..1000 {
-        let activations = get_activations(
-            network_parameters.total_layer_count(),
-            &inputs,
-            &weights,
-            &biases,
-        );
+        let activations = get_activations(&inputs, &weights, &biases);
         outputs.push(activations.last().unwrap().clone());
-        let gradients = get_gradients(&weights, &activations, &expected);
-        for ((layer_weights, layer_biases), gradients) in
-            weights.iter_mut().zip(biases.iter_mut()).zip(gradients)
-        {
-            *layer_weights += &gradients.weights * network_parameters.learning_rate;
-            *layer_biases += &gradients.biases * network_parameters.learning_rate;
-        }
+        let gradients = backpropagate(&weights, &activations, &expected);
+        gradient_descent(&mut weights, &mut biases, &gradients, &learning_parameters);
     }
     println!("First output: {}", outputs.first().unwrap());
     println!("Last output: {}", outputs.last().unwrap());
