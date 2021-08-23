@@ -1,16 +1,12 @@
 use crate::configuration::NetworkArchitecture;
 use crate::linear_algebra::{Float, Matrix, Vector};
+use crate::neural_network::Parameters;
 use rand::Rng;
 use std::iter;
 use std::ops::Range;
 
 const INITIAL_VALUE_OFFSET: Float = 1.0;
 const INITIAL_VALUE_RANGE: Range<Float> = 0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
-
-pub struct Parameters {
-    pub weights: Vec<Matrix>,
-    pub biases: Vec<Vector>,
-}
 
 /// Generates a random number in the range `range`
 fn generate_number(range: Range<Float>) -> Float {
