@@ -1,8 +1,8 @@
 use learning_backpropagation::configuration::{LearningConfiguration, NetworkArchitecture};
 use learning_backpropagation::generation::generate_parameters;
+use learning_backpropagation::neural_network::get_activations;
 use learning_backpropagation::training::train;
 use learning_backpropagation::training_data::generate_training_data;
-use std::iter;
 
 const EPOCHS: usize = 10_000;
 
@@ -18,11 +18,15 @@ const LEARNING_CONFIGURATION: LearningConfiguration = LearningConfiguration { le
 fn main() {
     let mut parameters = generate_parameters(&NETWORK_ARCHITECTURE);
     let training_data = generate_training_data(&NETWORK_ARCHITECTURE);
-    let outputs =
-        iter::repeat_with(|| train(&training_data, &mut parameters, &LEARNING_CONFIGURATION))
-            .take(EPOCHS)
-            .collect::<Vec<_>>();
-    println!("First output: {}", outputs.first().unwrap());
-    println!("Last output: {}", outputs.last().unwrap());
-    println!("Expected output: {}", training_data.labels);
+
+    for _ in 0..EPOCHS {
+        train(&training_data, &mut parameters, &LEARNING_CONFIGURATION);
+    }
+
+    for training_data in training_data.iter() {
+        let activations = get_activations(&training_data.inputs, &parameters);
+        let outputs = activations.last().unwrap();
+        println!("{}", training_data);
+        println!("output: {}", outputs);
+    }
 }

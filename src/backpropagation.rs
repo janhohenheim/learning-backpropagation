@@ -1,5 +1,6 @@
 use crate::functions::d_sigmoid;
 use crate::linear_algebra::{Float, Matrix, Vector};
+use std::ops::AddAssign;
 
 /// The gradients for a single layer
 pub struct Gradients {
@@ -7,6 +8,22 @@ pub struct Gradients {
     pub weights: Matrix,
     /// The gradients for the biases
     pub biases: Vector,
+}
+
+impl AddAssign for Gradients {
+    fn add_assign(&mut self, rhs: Gradients) {
+        self.weights += rhs.weights;
+        self.biases += rhs.biases;
+    }
+}
+
+impl Gradients {
+    pub fn zeros_like(weights: &Matrix, biases: &Vector) -> Self {
+        Self {
+            weights: Matrix::zeros(weights.nrows(), weights.ncols()),
+            biases: Vector::zeros(biases.len()),
+        }
+    }
 }
 
 /// Gets the derivative of the cost function with respect to the neuron activations.
