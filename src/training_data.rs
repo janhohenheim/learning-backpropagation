@@ -16,10 +16,20 @@ impl fmt::Display for TrainingData {
     }
 }
 
-pub fn generate_training_data(network_architecture: &NetworkArchitecture) -> Vec<TrainingData> {
+fn generate_training_set(
+    network_architecture: &NetworkArchitecture,
+    expected_outputs: &[Float],
+) -> TrainingData {
     let inputs = generate_vector(network_architecture.input_size);
     let labels = Vector::from_fn(network_architecture.output_size, |i, _j| {
-        i as Float / network_architecture.output_size as Float
+        expected_outputs[i]
     });
-    vec![TrainingData { inputs, labels }]
+    TrainingData { inputs, labels }
+}
+
+pub fn generate_training_data(network_architecture: &NetworkArchitecture) -> Vec<TrainingData> {
+    vec![
+        generate_training_set(network_architecture, &[0.0, 0.1, 0.2, 0.3, 0.4]),
+        generate_training_set(network_architecture, &[0.0, 0.2, 0.4, 0.6, 0.8]),
+    ]
 }
