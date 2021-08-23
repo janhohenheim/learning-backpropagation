@@ -1,11 +1,12 @@
 use learning_backpropagation::configuration::{LearningConfiguration, NetworkArchitecture};
+use learning_backpropagation::mnist::load_training_data;
 use learning_backpropagation::training::train;
-use learning_backpropagation::training_data::generate_training_data;
+use std::error::Error;
 
 const NETWORK_ARCHITECTURE: NetworkArchitecture = NetworkArchitecture {
-    input_size: 2,
+    input_size: 28 * 28,
     hidden_size: 10,
-    output_size: 5,
+    output_size: 1,
     hidden_layer_count: 2,
 };
 
@@ -15,9 +16,8 @@ const LEARNING_CONFIGURATION: LearningConfiguration = LearningConfiguration {
     epochs: 10_000,
 };
 
-fn main() {
-    let training_data = generate_training_data(&NETWORK_ARCHITECTURE);
-
+fn main() -> Result<(), Box<dyn Error>> {
+    let training_data = load_training_data("./mnist_handwritten_train.json")?;
     let neural_network = train(
         &training_data,
         &NETWORK_ARCHITECTURE,
@@ -29,4 +29,5 @@ fn main() {
         println!("{}", training_data);
         println!("output: {}", outputs);
     }
+    Ok(())
 }

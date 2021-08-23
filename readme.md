@@ -10,3 +10,5 @@ Resources:
 - https://gist.github.com/annanay25/b6a94ab7e399f75411b2
 - https://github.com/jackm321/RustNN/blob/master/src/lib.rs
 - https://ngoldbaum.github.io/posts/python-vs-rust-nn/
+
+Uses MNIST from https://github.com/lorenmh/mnist_handwritten_json

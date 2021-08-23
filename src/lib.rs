@@ -4,6 +4,7 @@ pub(crate) mod functions;
 pub(crate) mod generation;
 pub(crate) mod gradient_descent;
 pub(crate) mod linear_algebra;
+pub mod mnist;
 pub(crate) mod neural_network;
 pub mod trained_neural_network;
 pub mod training;

@@ -2,9 +2,23 @@ use crate::backpropagation::{backpropagate, Gradients};
 use crate::configuration::{LearningConfiguration, NetworkArchitecture};
 use crate::generation::generate_parameters;
 use crate::gradient_descent::gradient_descent;
+use crate::linear_algebra::Vector;
 use crate::neural_network::{get_activations, Parameters};
 use crate::trained_neural_network::TrainedNeuralNetwork;
-use crate::training_data::TrainingData;
+use std::fmt;
+
+/// A pre-labeled training data set.
+#[derive(Debug)]
+pub struct TrainingData {
+    pub inputs: Vector,
+    pub labels: Vector,
+}
+
+impl fmt::Display for TrainingData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "inputs: {}labels: {}", self.inputs, self.labels)
+    }
+}
 
 fn generate_empty_gradients(parameters: &Parameters) -> Vec<Gradients> {
     parameters
