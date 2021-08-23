@@ -146,29 +146,29 @@ fn generate_weights(network_parameters: &NetworkParameters) -> Vec<Matrix> {
         network_parameters.hidden_size,
         network_parameters.input_size,
     );
+    let hidden_to_hidden_weights = iter::repeat_with(|| {
+        generate_matrix(
+            network_parameters.hidden_size,
+            network_parameters.hidden_size,
+        )
+    });
     let hidden_to_output_weights = generate_matrix(
         network_parameters.output_size,
         network_parameters.hidden_size,
     );
-
-    let mut weights = (0..network_parameters.hidden_layer_count - 1).fold(
-        vec![input_to_hidden_weights],
-        |mut acc, _layer| {
-            acc.push(generate_matrix(
-                network_parameters.hidden_size,
-                network_parameters.hidden_size,
-            ));
-            acc
-        },
-    );
-    weights.push(hidden_to_output_weights);
-    weights
+    iter::once(input_to_hidden_weights)
+        .chain(hidden_to_hidden_weights)
+        .take(network_parameters.hidden_layer_count)
+        .chain(iter::once(hidden_to_output_weights))
+        .collect()
 }
 
 fn generate_biases(network_parameters: &NetworkParameters) -> Vec<Vector> {
-    iter::repeat_with(|| generate_vector(network_parameters.hidden_size))
+    let hidden_biases = iter::repeat_with(|| generate_vector(network_parameters.hidden_size));
+    let output_biases = generate_vector(network_parameters.output_size);
+    hidden_biases
         .take(network_parameters.hidden_layer_count)
-        .chain(iter::once(generate_vector(network_parameters.output_size)))
+        .chain(iter::once(output_biases))
         .collect()
 }
 
