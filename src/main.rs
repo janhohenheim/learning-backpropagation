@@ -87,27 +87,18 @@ fn get_activations(
     })
 }
 
-fn get_gradients_from_dc_dz(
-    dc_dzs: &[Matrix],
-    activations: &[Matrix],
-    weights: &[Matrix],
-) -> Vec<(Matrix, Matrix)> {
+fn get_gradients_from_dc_dz(dc_dzs: &[Matrix], activations: &[Matrix]) -> Vec<(Matrix, Matrix)> {
     let last_activations = activations.iter().rev().skip(1);
-    dc_dzs
-        .iter()
-        .zip(last_activations)
-        .zip(weights.iter().rev())
-        .fold(
-            Vec::new(),
-            |mut gradients, ((dc_dz, last_activation), weights)| {
-                // rows are *to* layer, colums are *from* layer
-                let weight_gradient =
-                    weights.map_with_location(|row, col, _| dc_dz[row] * last_activation[col]);
-                let bias_gradient = dc_dz.clone();
-                gradients.push((weight_gradient, bias_gradient));
-                gradients
-            },
-        )
+    dc_dzs.iter().zip(last_activations).fold(
+        Vec::new(),
+        |mut gradients, (dc_dz, last_activation)| {
+            // Same as outer product
+            let weight_gradient = dc_dz * last_activation.transpose();
+            let bias_gradient = dc_dz.clone();
+            gradients.push((weight_gradient, bias_gradient));
+            gradients
+        },
+    )
 }
 
 fn get_gradients(
@@ -116,7 +107,7 @@ fn get_gradients(
     expected: &Matrix,
 ) -> Vec<(Matrix, Matrix)> {
     let dc_dzs = get_dc_dz(weights, activations, expected);
-    get_gradients_from_dc_dz(&dc_dzs, activations, weights)
+    get_gradients_from_dc_dz(&dc_dzs, activations)
 }
 
 fn main() {
