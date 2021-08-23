@@ -14,7 +14,7 @@ fn sigmoid(n: Float) -> Float {
     1.0 / (1.0 + E.powf(-n))
 }
 
-/// Requires that sigmoid is already sigmoid(x)
+/// Requires that input is already in the form of sigmoid(x)
 fn d_sigmoid(sigmoid: Float) -> Float {
     sigmoid * (1.0 - sigmoid)
 }
@@ -23,22 +23,21 @@ fn generate_number(range: Range<Float>) -> Float {
     rand::thread_rng().gen_range(range)
 }
 
+/// Generates a random matrix of size `rows` x `cols`
 fn generate_matrix(rows: usize, cols: usize) -> Matrix {
     Matrix::from_fn(rows, cols, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
 }
 
+/// Generates a random vector of size `size`
 fn generate_vector(size: usize) -> Vector {
     Vector::from_fn(size, |_i, _j| generate_number(INITIAL_VALUE_RANGE))
 }
 
-fn get_neuron_values(last_layer: &Vector, weights: &Matrix, biases: &Vector) -> Vector {
-    weights * last_layer + biases
+fn activate_layer(last_layer: &Vector, weights: &Matrix, biases: &Vector) -> Vector {
+    (weights * last_layer + biases).map(sigmoid)
 }
 
-fn run_activation_function(neuron_values: Vector) -> Vector {
-    neuron_values.map(sigmoid)
-}
-
+/// Gets the derivative of the cost function with respect to the neuron activations.
 /// Cost function is (expected - actual)^2
 fn dc_da_for_last_layer(actual: &Vector, expected: &Vector) -> Vector {
     2.0 * (expected - actual)
@@ -81,11 +80,7 @@ fn get_activations(
     biases: &[Vector],
 ) -> Vec<Vector> {
     (0..layer_count - 1).fold(vec![inputs.clone()], |mut activations, layer| {
-        let activation = run_activation_function(get_neuron_values(
-            &activations[layer],
-            &weights[layer],
-            &biases[layer],
-        ));
+        let activation = activate_layer(&activations[layer], &weights[layer], &biases[layer]);
         activations.push(activation);
         activations
     })
