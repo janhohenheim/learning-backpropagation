@@ -11,7 +11,8 @@ const NETWORK_ARCHITECTURE: NetworkArchitecture = NetworkArchitecture {
 };
 
 const LEARNING_CONFIGURATION: LearningConfiguration = LearningConfiguration {
-    learning_rate: 0.3,
+    learning_rate: 0.1,
+    momentum: 0.9,
     mini_batch_size: 10,
     epochs: 30,
 };

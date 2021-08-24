@@ -43,7 +43,8 @@ fn train_mini_batch(
     training_data: &[TrainingData],
     mut parameters: &mut Parameters,
     learning_configuration: &LearningConfiguration,
-) {
+    last_gradients: &[Gradients],
+) -> Vec<Gradients> {
     let gradients = training_data
         .par_iter()
         .map(|training_data| {
@@ -51,7 +52,13 @@ fn train_mini_batch(
             backpropagate(&parameters.weights, &activations, &training_data.labels)
         })
         .reduce(|| generate_empty_gradients(parameters), add_gradients);
-    gradient_descent(&mut parameters, &gradients, learning_configuration);
+    gradient_descent(
+        &mut parameters,
+        &gradients,
+        last_gradients,
+        learning_configuration,
+    );
+    gradients
 }
 
 /// Trains a neural network during a single epoch.
@@ -62,9 +69,17 @@ fn train_epoch(
 ) {
     training_data
         .chunks(learning_configuration.mini_batch_size)
-        .for_each(|mini_batch| {
-            train_mini_batch(mini_batch, &mut parameters, learning_configuration);
-        });
+        .fold(
+            generate_empty_gradients(parameters),
+            |last_gradients, mini_batch| {
+                train_mini_batch(
+                    mini_batch,
+                    &mut parameters,
+                    learning_configuration,
+                    &last_gradients,
+                )
+            },
+        );
 }
 
 /// Trains a neural network using the backpropagation algorithm.
