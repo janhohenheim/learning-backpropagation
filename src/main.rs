@@ -27,9 +27,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let testing_data = load_training_data("./mnist_handwritten_test.json")?;
     for testing_data in testing_data.iter() {
         let outputs = neural_network.run(&testing_data.inputs);
-        println!("label: {}", &testing_data.labels * 10.0);
-        println!("output: {}", &outputs * 10.0);
-        println!("------");
+        println!("label: {}", &testing_data.labels[0] * 10.0);
+        println!("output: {}", &outputs[0] * 10.0);
+        println!();
     }
     Ok(())
 }
