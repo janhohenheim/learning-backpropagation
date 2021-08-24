@@ -7,9 +7,9 @@ use std::ops::Range;
 
 /// Generates a random number in the range `range`
 pub fn generate_number() -> Float {
-    const INITIAL_VALUE_OFFSET: Float = 1.0;
+    const INITIAL_VALUE_OFFSET: Float = 0.5;
     const INITIAL_VALUE_RANGE: Range<Float> =
-        0.0 - INITIAL_VALUE_OFFSET..1.0 + INITIAL_VALUE_OFFSET;
+        (0.0 - INITIAL_VALUE_OFFSET)..(0.0 + INITIAL_VALUE_OFFSET);
     rand::thread_rng().gen_range(INITIAL_VALUE_RANGE)
 }
 

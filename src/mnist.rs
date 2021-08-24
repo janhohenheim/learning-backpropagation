@@ -23,8 +23,8 @@ pub fn load_training_data(path: &str) -> Result<Vec<TrainingData>, Box<dyn Error
     let training_data = mnist
         .into_iter()
         .map(|mnist| TrainingData {
-            inputs: Vector::from_vec(mnist.image),
-            labels: Vector::from_vec(vec![mnist.label]),
+            inputs: Vector::from_vec(mnist.image) / 255.0,
+            labels: Vector::from_vec(vec![mnist.label / 10.0]),
         })
         .collect::<Vec<_>>();
     Ok(training_data)
