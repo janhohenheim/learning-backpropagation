@@ -18,6 +18,7 @@ fn load_mnist(path: &str) -> Result<Vec<Mnist>, Box<dyn Error>> {
     Ok(mnist)
 }
 
+/// Loads the MNIST dataset.
 pub fn load_training_data(path: &str) -> Result<Vec<TrainingData>, Box<dyn Error>> {
     let mnist = load_mnist(path)?;
     let training_data = mnist

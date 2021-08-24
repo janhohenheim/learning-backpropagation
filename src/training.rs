@@ -38,6 +38,7 @@ fn add_gradients(mut gradient_sum: Vec<Gradients>, summand: Vec<Gradients>) -> V
     gradient_sum
 }
 
+/// Trains a neural network using a given set of training data.
 fn train_mini_batch(
     training_data: &[TrainingData],
     mut parameters: &mut Parameters,
@@ -53,6 +54,7 @@ fn train_mini_batch(
     gradient_descent(&mut parameters, &gradients, learning_configuration);
 }
 
+/// Trains a neural network during a single epoch.
 fn train_epoch(
     training_data: &[TrainingData],
     mut parameters: &mut Parameters,
@@ -65,6 +67,7 @@ fn train_epoch(
         });
 }
 
+/// Trains a neural network using the backpropagation algorithm.
 pub fn train(
     training_data: &[TrainingData],
     network_architecture: &NetworkArchitecture,
